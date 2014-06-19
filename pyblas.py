@@ -15,7 +15,7 @@ sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 
 data = None
 
-with codecs.open("proc.txt", encoding='iso8859') as fl:
+with codecs.open("hrs_c.txt", encoding='iso8859') as fl:
         data=fl.read()
 
 
@@ -24,18 +24,17 @@ push_str = []
 states = (
   ('ccode','exclusive'),
   ('fillcode', 'exclusive'),
-  ('layoutcode', 'exclusive')
-)
+  ('layoutcode', 'exclusive'),)
+#  ('tagcode', 'inclusive')
+#)
 
 tokens = [
+    "RULES",
+    "ENDBLOCK",
+    "ENDPROCEDURE",
+    "TAG",
+
     "DOTDOT",
-    "LPAREN",
-    "RPAREN",
-    "LBRACKET",
-    "RBRACKET",
-    "PIPE",
-    "PLUS",
-    "DIFF",
     "LESSEQUALTHAN",
     "EQUALMORETHAN",
     "LESSTHAN",
@@ -58,11 +57,22 @@ tokens = [
     "MINUS",
     "FILL",
     "DOUBLESINGLES",
-    "CHECK"
+      "LPAREN",
+    "RPAREN",
+    "LBRACKET",
+    "RBRACKET",
+    "PIPE",
+    "PLUS",
+    "DIFF",
+
+
+
+
 
 ]
 
 reserved = {
+ 'CHECK' : 'CHECK',
 'IF' : 'IF' ,
 'THEN' : 'THEN',
 'TYPE' : 'TYPE',
@@ -74,8 +84,6 @@ reserved = {
 'ENDIF' : "ENDIF",
 'BLOCK' : "BLOCK",
 'PROCEDURE' : 'PROCEDURE',
-'ENDPROCEDURE' : 'ENDPROCEDURE',
-'ENDBLOCK' : "ENDBLOCK",
 'AUXFIELDS':'AUXFIELDS',
 'IMPORT' : 'IMPORT',
 'EXPORT' : 'EXPORT',
@@ -83,12 +91,12 @@ reserved = {
 'SHOW' : 'SHOW',
 'KEEP' : 'KEEP',
 'ORD' : 'ORD',
+'CARDINAL' : 'CARDINAL',
 'ASK' : 'ASK',
 'EMPTY' : 'EMPTY',
 'NOEMPTY' : 'NOEMPTY',
-'RULES' : 'RULES',
-#'STRING' : 'STRING',
-#'INTEGER' : 'INTEGER',
+'STRING' : 'STRING',
+'INTEGER' : 'INTEGER',
 'NORF' : 'NORF',
 'NODK' : 'NODK',
 'DK' : 'DK',
@@ -98,6 +106,7 @@ reserved = {
 'RF' :'RF',
 'IN' : 'IN',
 'LOCALS' : 'LOCALS',
+'FIELDS' : 'FIELDS',
 'AUXFIELDS' : 'AUXFIELDS',
 'REPEAT' : 'REPEAT',
 'TO' : 'TO',
@@ -110,10 +119,7 @@ reserved = {
 'NOT' : 'NOT',
 'ENDDO' : 'ENDDO',
 'ENDWHILE' : 'ENDWHILE',
-'FIELDS' : 'FIELDS',
 'INVOLVING' : 'INVOLVING',
-#'FROM' : 'FROM',
-#'FIELDPANE' : 'FIELDPANE',
 'SIGNAL' : 'SIGNAL',
 'MOD' : 'MOD',
 'LEN' : 'LEN',
@@ -156,11 +162,87 @@ def t_ccode_rbrace(t):
 t_ccode_ignore = ' \t'
 
 
-
-
 def t_ccode_error(t):
     t.lexer.skip(1)
 
+"""
+def t_tagcode(t):
+    r'FIELDS'
+    t.lexer.code_start = t.lexer.lexpos        # Record the starting position
+    t.lexer.level = 1                          # Initial brace level
+    t.lexer.begin('tagcode')                     # Enter 'ccode' state
+    t.type = "FIELDS"
+    t.value = "FIELDS"
+    print "START FIELDS MODE"
+    return t
+
+
+def t_tagcode_IDENTIFIER(t):
+    u"[\^a-zA-Z_][a-zA-Zραινσϊό0-9_]*"
+    t.type = reserved.get(string.upper(t.value), 'IDENTIFIER')
+    print t.value
+    return t
+
+def t_tagcode_TAG(t):
+    u"\([A-Z][0-9]+[\.\d_A-Z]+\)"
+    print t.value
+    return t
+
+
+def t_tagcode_LPAREN(t):
+    u"\("
+    return t
+
+
+def t_tagcode_RULES(t):
+    r'[Rr][Uu][Ll][Ee][Ss]'
+
+
+    t.lexer.level -=1
+    # If closing brace, return the code fragment
+    if t.lexer.level == 0:
+         t.value = "RULES"
+         t.type = "RULES"
+         t.lexer.lineno += t.value.count('\n')
+         t.lexer.begin('INITIAL')
+         print "END FIELDS MODE"
+         return t
+
+
+def t_tagcode_ENDPROCEDURE(t):
+    r'[Ee][Nn][Dd][Pp][Rr][Oo][Cc][Ee][Dd][Uu][Rr][Ee]'
+
+    t.lexer.level -=1
+    # If closing brace, return the code fragment
+    if t.lexer.level == 0:
+         t.value = "ENDPROCEDURE"
+         t.type = "ENDPROCEDURE"
+         t.lexer.lineno += t.value.count('\n')
+         t.lexer.begin('INITIAL')
+         print "END FIELDS MODE"
+         return t
+
+t_tagcode_ignore = ' \t'
+
+
+def t_tagcode_ENDBLOCK(t):
+    r'ENDBLOCK'
+
+    t.lexer.level -=1
+    # If closing brace, return the code fragment
+    if t.lexer.level == 0:
+         t.value = "ENDBLOCK"
+         t.type = "ENDBLOCK"
+         t.lexer.lineno += t.value.count('\n')
+         t.lexer.begin('INITIAL')
+         print "END FIELDS MODE"
+         return t
+
+def t_tagcode_error(t):
+    print "Illegal character '%s'" % t.value[0]
+    t.lexer.skip(1)
+
+"""
 
 def t_layoutcode(t):
     r'[Ll][Aa][Yy][Oo][Uu][Tt]'
@@ -174,7 +256,7 @@ def t_layoutcode_TO(t):
     pass
 
 def t_layoutcode_ENDBLOCK(t):
-    r'ENDBLOCK'
+    r'[Ee][Nn[Dd][Bb][Ll][Oo][Cc][Kk]'
     t.lexer.level -=1
     # If closing brace, return the code fragment
     if t.lexer.level == 0:
@@ -262,30 +344,26 @@ def t_fillcode_LITERAL(t):
 t_fillcode_ignore = ' \t'
 
 
+def t_TAG(t):
+    u"\([A-Z][0-9]+[\.\d_A-Z]+\)"
+    print t.value
+    return t
+
+def t_RULES(t):
+    r'[Rr][Uu][Ll][Ee][Ss]'
+    return t
 
 def t_fillcode_error(t):
     t.lexer.skip(1)
 
-
-def t_CHECK(t):
-    r'''[cC][Hh][eE][cC][kK]'''
-    return t
-
-def t_PIPE(t):
-    r'\|'
+def t_ENDPROCEDURE(t):
+    r'[Ee][Nn][Dd][Pp][Rr][Oo][Cc][Ee][Dd][Uu][Rr][Ee]'
     return t
 
 
-def t_FILL(t):
-    r'\^'
+def t_ENDBLOCK(t):
+    r'[Ee][Nn][Dd][Bb][Ll][Oo][Cc][Kk]'
     return t
-
-def t_SEMI(t):
-    r';'
-    pass
-
-
-
 
 
 def t_DIFF(t):
@@ -310,6 +388,21 @@ def t_COUNT(t):
     r"[0-9]+"
     t.value = int(t.value)
     return t
+
+
+def t_PIPE(t):
+    r'\|'
+    return t
+
+
+def t_FILL(t):
+    r'\^'
+    return t
+
+def t_SEMI(t):
+    r';'
+    pass
+
 
 
 def t_COMMA(t):
@@ -343,17 +436,15 @@ def t_COLON(t):
     return t
 
 
+def t_cr(t):
+    r'\r+'
+
+
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += t.value.count("\n")
 
-def t_LPAREN(t):
-    u"\("
-    return t
 
-def t_RPAREN(t):
-    u"\)"
-    return t
 
 def t_LBRACKET(t):
     r"\["
@@ -398,6 +489,14 @@ def t_IDENTIFIER(t):
     #print t
     return t
 
+def t_LPAREN(t):
+    u"\("
+    return t
+
+def t_RPAREN(t):
+    u"\)"
+    return t
+
 def t_error(t):
     print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
@@ -411,16 +510,16 @@ lexer.input(data)
 
 
 
-for tok in iter(lexer.token, None):
-    print tok.type,
+#for tok in iter(lexer.token, None):
+    #print tok.type,
 
-    if type(tok.value) == type(u's'):
+    #if type(tok.value) == type(u's'):
        #pass
-        print tok.value
-    else:
+    #    print tok.value
+    #else:
         #pass
-        print repr(tok.value)
-    print tok
+    #    print repr(tok.value)
+ #   print tok
 
 
 precedence = (
@@ -478,6 +577,7 @@ def p_block_declaration(p):
     '''
 
 
+
 def p_procedure_identification(p):
     r'''
             procedure_identification : PROCEDURE IDENTIFIER
@@ -489,12 +589,25 @@ def p_block_identification(p):
     r'''
             block_identification : BLOCK IDENTIFIER
     '''
+    print "BLOCK " + p[2]
+
+def p_type_array(p):
+    r'''
+        type_array : LBRACKET COUNT RBRACKET
+                    | LBRACKET RBRACKET
+
+    '''
 
 def p_type_denoter(p):
     '''
             type_denoter : IDENTIFIER
+                        | STRING  type_array
+                        | INTEGER type_array
+                        | STRING
+                        | INTEGER
                         | new_type
     '''
+
 
 def p_new_type(p):
     '''
@@ -539,9 +652,15 @@ def p_enumerated_list(p):
 
     '''
 
+def p_numeric_type(p):
+    r'''
+    numeric_type : FLOAT
+                | COUNT
+    '''
+
 def p_subrange_type(p):
     '''
-        subrange_type : COUNT DOTDOT COUNT
+        subrange_type : numeric_type DOTDOT numeric_type
 
     '''
 
@@ -592,6 +711,7 @@ def p_component_type(p):
 def p_set_type(p):
     '''
     set_type : SET OF base_type
+            | SET LBRACKET COUNT RBRACKET OF base_type
 
     '''
 
@@ -615,14 +735,12 @@ def p_identifier_list(p):
 def p_type_definition_list(p):
     r'''
             type_definition_list : type_definition_list type_definition
-                                | type_definition
+                                 | type_definition
     '''
 
 def p_type_definition(p):
     r'''
         type_definition : IDENTIFIER COMPARE type_denoter tmodifiers_list
-
-
     '''
 
 
@@ -662,28 +780,54 @@ def p_rules_part(p):
         rules_part : RULES statement_part
     '''
 
+    print "\tRULES"
+
 def p_locals_part(p):
     r'''
         locals_part : LOCALS locals_declaration_list
-                    |
-    '''
+        
 
+    '''
+    print "\tLOCALS"
 
 def p_fields_part(p):
     r'''
-        fields_part : FIELDS fields_declaration_list locals_part
-                    |
+        fields_part : FIELDS fields_declaration_list
+
     '''
+    print "\tFIELDS"
 
 def p_auxfields_part(p):
     r'''
-        auxfields_part : AUXFIELDS parameters_declaration_list
-                    |
+        auxfields_part : AUXFIELDS fields_declaration_list
+
     '''
+
+    print "\tAUXFIELDS"
+
+def p_optional_sections_list(p):
+    '''
+        optional_sections_list : optional_sections_list optional_sections
+                                | optional_sections
+
+
+    '''
+
+def p_optional_sections(p):
+    '''
+            optional_sections : parameters_declaration_part
+                                | type_definition_part
+                                | locals_part
+                                | auxfields_part
+                                | fields_part
+
+    '''
+
 
 def p_procedure_block(p):
     r'''
-        procedure_block : parameters_declaration_part type_definition_part locals_part auxfields_part fields_part  rules_part
+        procedure_block :   optional_sections_list  rules_part
+
     '''
 
 def p_parameter_modifiers(p):
@@ -722,20 +866,20 @@ def p_field_description(p):
     '''
 
 
-
-def p_tag(p):
+def p_tag_rule(p):
     '''
-    tag : LPAREN LITERAL RPAREN
+    tag_rule  : LPAREN LITERAL RPAREN
         |
     '''
 
 
 def p_fields_declaration(p):
     '''
-    fields_declaration : identifier_list tag enum_languages_list field_description COLON type_denoter
-                    | identifier_list COLON type_denoter COMMA tmodifiers
-                    | identifier_list COLON type_denoter
-
+    fields_declaration : identifier_list tag_rule enum_languages_list field_description COLON type_denoter
+                       | identifier_list field_description COLON type_denoter
+                       | identifier_list COLON type_denoter COMMA tmodifiers
+                       | identifier_list  COLON type_denoter
+                       | IDENTIFIER TAG enum_languages_list field_description COLON type_denoter tmodifiers_list
     '''
 
 
@@ -743,6 +887,7 @@ def p_parameters_declaration_part(p):
     r'''
         parameters_declaration_part : PARAMETERS parameters_declaration_list
     '''
+    print "\t\tPARAMETERS"
 
 def p_statement_part(p):
     r'''
@@ -760,6 +905,8 @@ def p_parameters_declaration_list(p):
 def p_parameter_declaration(p):
     r'''
             parameter_declaration : parameter_modifiers identifier_list COLON type_denoter
+                                    | procedure_declaration
+                                    | block_declaration
 
     '''
 
@@ -870,6 +1017,20 @@ def p_add_expression(p):
 
     '''
 
+    try:
+        if len(p) > 2:
+            if p[2] == "+":
+                p[0] = p[1] + p[3]
+            elif p[2] == "-":
+                p[0] = p[1] - p[3]
+            elif p[2] == "MOD":
+                p[0] = p[1] % p[3]
+        else:
+            p[0] = p[1]
+
+    except:
+        print "Add Expression Error"
+
 
 def p_mult_expression(p):
     r'''
@@ -879,6 +1040,20 @@ def p_mult_expression(p):
                             | unary_expression
     '''
 
+    try:
+        if len(p) > 2:
+            if p[2] == "*":
+                p[0] = p[1] + p[3]
+            elif p[2] == "/":
+                p[0] = p[1] - p[3]
+            elif p[2] == "IN":
+                print "IN"
+                print p[3]
+        else:
+            p[0] = p[1]
+
+    except:
+        print "Mult Expression Error"
 
 def p_unary_expression(p):
     r'''
@@ -887,11 +1062,15 @@ def p_unary_expression(p):
     '''
 
 
+
 def p_exp_expression(p):
     r'''
                     exp_expression : primary MULTMULT exp_expression
                                     | primary
     '''
+
+
+
 
 
 def p_built_in_functions(p):
@@ -902,6 +1081,7 @@ def p_built_in_functions(p):
                             | RANDOM
 
     '''
+    p[0] = p[1]
 
 
 def p_primary(p):
@@ -910,10 +1090,13 @@ def p_primary(p):
                 | unsigned_constant
                 | set_constructor
                 | COUNT
+                | FLOAT
                 | LPAREN expression RPAREN
                 | built_in_functions LPAREN index_expression_list RPAREN
+                | IDENTIFIER LPAREN index_expression_list RPAREN
 
     '''
+
 
 def p_unsigned_constant(p):
     r'''
@@ -922,7 +1105,7 @@ def p_unsigned_constant(p):
                         | DK
                         | EMPTY
     '''
-
+    p[0] = p[1]
 
 
 def p_set_constructor(p):
@@ -931,6 +1114,8 @@ def p_set_constructor(p):
                         | LBRACKET RBRACKET
 
     '''
+
+
 
 def p_member_designator_list(p):
     r'''
@@ -953,7 +1138,9 @@ def p_variable_access(p):
 
     '''
     p[0] = p[1]
-    #print "IDENTIFIER: "  + str(p[1])
+
+    if p[1] != None:
+        print "IDENTIFIER: "  + str(p[1])
 
 
 
@@ -978,17 +1165,15 @@ def p_index_expression(p):
 def p_field_designator(p):
     r'''
         field_designator : variable_access DECIMAL IDENTIFIER
+                        | variable_access DECIMAL ORD
+                          | variable_access DECIMAL CARDINAL
 
     '''
     #print "."
     #print p[3]
     try:
-        p[0] = p[1] + " " + p[2] + " " + p[3]
-        print "FIELD:"
+        p[0] = p[1] + "" + p[2] + "" + p[3]
         print p[0]
-        print p[1]
-        print p[2]
-        print p[3]
     except:
         pass
 
@@ -996,6 +1181,7 @@ def p_field_designator(p):
 def p_method_statement(p):
     r'''
          method_statement : variable_access DECIMAL KEEP
+
     '''
 
 def p_procedure_statement(p):
@@ -1048,10 +1234,13 @@ def p_statement(p):
                     | while_statement
                     | for_statement
                     | check_statement
+                    | signal_statement
+                    | not_statement
                     | module_statement
 
 
     '''
+    p[0] = p[1]
 
 
 def p_repeat_statement(p):
@@ -1065,6 +1254,8 @@ def p_while_statement(p):
         while_statement : WHILE boolean_expression DO statement_list ENDWHILE
     '''
 
+
+
 def p_for_statement(p):
     '''
         for_statement : FOR control_variable ASSIGN initial_value direction final_value DO statement_list ENDDO
@@ -1073,6 +1264,8 @@ def p_for_statement(p):
 def p_involving_vars(p):
     '''
         involving_vars : INVOLVING LPAREN statement_list RPAREN
+                    | INVOLVING params
+                    | INVOLVING TAG
                     |
     '''
 
@@ -1081,6 +1274,18 @@ def p_check_statement(p):
         check_statement : CHECK boolean_expression involving_vars LITERAL
     '''
 
+def p_signal_statement(p):
+    '''
+        signal_statement : SIGNAL boolean_expression involving_vars LITERAL
+    '''
+
+
+def p_not_statement(p):
+    r'''
+            not_statement : NOT boolean_expression statement
+                            | NOT boolean_expression involving_vars LITERAL
+                            | LITERAL
+    '''
 
 def p_if_statement(p):
     r'''
@@ -1088,6 +1293,11 @@ def p_if_statement(p):
                         | IF boolean_expression THEN statement_list else_statement_list ENDIF
                         | IF boolean_expression THEN statement_list ENDIF
  '''
+
+    if p[2] and p[4]:
+        print "IF " + p[2] + " THEN " + p[4]
+
+
 def p_else_statement_list(p):
     r'''
         else_statement_list : ELSEIF boolean_expression THEN statement_list else_statement_list
@@ -1096,11 +1306,14 @@ def p_else_statement_list(p):
 
     '''
 
+    p[0] = p[2]
+
 
 
 def p_assignment_statement(p):
     r'''
         assignment_statement : variable_access ASSIGN expression
+
         '''
         #assignment_statement
 
