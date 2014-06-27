@@ -569,6 +569,23 @@ def p_proc_or_block_declaration(p):
                                             '''
     p[0] = p[1]
 
+class Field(Expr):
+
+    def __init__(self, name, tag, languages, description, typeOf, modifiers = None):
+        self.type = "Field"
+        self.name  = name
+        self.tag = tag
+        self.languages = languages
+        self.description = description
+        self.typeOf = typeOf
+        self.modifiers = modifiers
+        print typeOf
+
+
+    def __repr__(self):
+        return u"Field: %s Type: %s  Tag: %s " % (self.name, self.typeOf, self.tag)
+
+
 class BinOp(Expr):
     def __init__(self,left,op,right):
         self.type = "binop"
@@ -578,10 +595,10 @@ class BinOp(Expr):
 
     def __repr__(self):
 
-        if self.left and self.right:
+        if self.left != None and self.right != None:
             return u"L:%s %s R:%s" % (self.left, self.op,  self.right)
         else:
-            return "None"
+            return "MISSING BINOP"
 
 
 class IfStatement(Expr):
@@ -593,11 +610,10 @@ class IfStatement(Expr):
 
     def __repr__(self):
 
-        if self.left and self.right:
+        if self.left != None and self.right != None:
             return u"IF %s THEN %s" % (self.left, self.right)
         else:
-            print "**********************"
-            return "None"
+            return "Missing IF"
 
 
 class IfElseStatement(Expr):
@@ -610,11 +626,10 @@ class IfElseStatement(Expr):
 
     def __repr__(self):
 
-        if self.left and self.right:
+        if self.left != None and self.right != None:
             return u"IF 1:%s THEN 2:%s ELSE 3:%s" % (self.first, self.second, self.third)
         else:
-            print "**********************"
-            return "None"
+            return "MISSING IF ELSE"
 
 
 class ElseStatement(Expr):
@@ -625,11 +640,10 @@ class ElseStatement(Expr):
 
     def __repr__(self):
 
-        if self.first:
+        if self.first != None:
             return u"ELSE 1:%s" % (self.first)
         else:
-            print "**********************"
-            return "None"
+            return "MISSING ELSE"
 
 
 
@@ -765,7 +779,8 @@ def p_type_denoter(p):
         p[0] = TypeDenoter(p[1])
 
         if p.slice[1].type == "IDENTIFIER":
-            print "This needs to look at the symbol table"
+            #print "This needs to look at the symbol table"
+            pass
 
 
 
@@ -799,15 +814,26 @@ def p_enumerated_type(p):
 
 def p_enum_languages_list(p):
     r'''
-        enum_languages_list : LITERAL enum_languages_list
+        enum_languages_list :  enum_languages_list LITERAL
                         | LITERAL
+
     '''
 
+
+    items = []
     if len(p) > 2:
-        if type(p[2] == 'unicode'):
-            p[0] = [p[1]] + [p[2]]
+        if p[1] != None and isinstance(p[1], list):
+            for i in p[1]:
+                items.append(i)
+
+            items.append(p[2])
+            p[0] = items
+        elif p[1] != None:
+             p[0] = [p[1],p[2]]
         else:
-            p[0] = p[2].push(p[1])
+            p[0] = p[2]
+
+
     else:
         p[0] = p[1]
 
@@ -931,17 +957,22 @@ def p_identifier_list(p):
                         | IDENTIFIER
     '''
 
+    items = []
     if len(p) > 2:
+       if p[1] != None and isinstance(p[1], list):
+            for i in p[1]:
+                items.append(i)
 
-        if p[1] != None and isinstance(p[1], list):
-            p[0] = p[1].append(Identifier(p[3]))
-        elif p[1] != None:
+            items.append(Identifier(p[3]))
+            p[0] = items
+       elif p[1] != None:
             p[0] = [p[1],Identifier(p[3])]
-        else:
+       else:
             p[0] = Identifier(p[3])
+
     else:
         p[0] = Identifier(p[1])
-    print "Agony: " , p[0]
+
 
 
 
@@ -962,28 +993,20 @@ def p_locals_declaration_list(p):
     '''
 
     if len(p) > 2:
-        print "here 1"
         if isinstance(p[1], list) and isinstance(p[2],list):
             p[0] = p[1] + p[2]
-            print "here 2"
         elif isinstance(p[1], list) and p[2] != None:
             p[0] = p[1] + [p[2]]
-            print "here 3"
         elif p[1] != None and isinstance(p[2], list):
             p[0] = [p[1]] + p[2]
-            print "here 4"
         elif isinstance(p[1], list):
             p[0] = p[1]
-            print "here 5"
         else:
-            print "here 6"
             if p[1] != None and p[2] != None:
-                print "here 7"
                 p[0] = [p[1], p[2]]
 
     else:
         p[0] = p[1]
-        print "here 8"
 
 
 def p_locals_declaration(p):
@@ -995,15 +1018,15 @@ def p_locals_declaration(p):
 
     items = []
 
-    if p[1] != None:
-            print "here 18"
-            if isinstance(p[1],list):
-                print "here 15"
-                for i in p[1]:
-                    items.append( TypeLocal( i, TypeDenoter(p[3]) ))
-            else:
-                print "here 16"
-                items.append( TypeLocal( p[1], TypeDenoter(p[3]) ))
+    if p[1] != None and isinstance(p[1],list):
+        for i in p[1]:
+            items.append(i)
+
+        items.append(TypeLocal( p[1], TypeDenoter(p[3]) ))
+
+    else:
+       items.append( TypeLocal( p[1], TypeDenoter(p[3]) ))
+
     p[0] = items
 
 
@@ -1091,6 +1114,8 @@ def p_rules_part(p):
     else:
         p[0] = p[1]
 
+    print p[0]
+
 def p_locals_part(p):
     r'''
         locals_part : LOCALS locals_declaration_list
@@ -1118,6 +1143,8 @@ def p_fields_part(p):
     else:
         p[0] = p[1]
 
+    print p[0]
+
 
 def p_auxfields_part(p):
     r'''
@@ -1130,7 +1157,9 @@ def p_auxfields_part(p):
     else:
         p[0] = p[1]
 
-    #print "\tAUXFIELDS"
+    print "\tAUXFIELDS"
+
+    print p[0]
 
 def p_optional_sections_list(p):
     '''
@@ -1188,19 +1217,36 @@ def p_fields_declaration_list(p):
                                 | fields_declaration
     '''
 
+    items = []
+
     if len(p) > 2:
 
-        if isinstance(p[1], list) and p[2] != None:
-            p[0] = p[1].append(p[2])
-        elif isinstance(p[1], list):
-            p[0] = p[1]
-        elif isinstance(p[2], list):
-            p[0] = [p[1]] + p[2]
+        if p[1] != None and p[2] != None and isinstance(p[1],list) and isinstance(p[2],list):
+            p[0] = p[1] + p[2]
+        elif p[1] != None and isinstance(p[1], list):
+           for i in p[1]:
+              items.append(i)
+           items.append(p[2])
+           p[0] = items
+
+        elif p[1] != None:
+            if isinstance(p[2],list):
+                p[0] =  [p[1]] + p[2]
+                print p[0]
+                print  [p[1]] + p[2]
+            else:
+                p[0] = [p[1],p[2]]
+                print p[0]
+                print [p[1],p[2]]
+
         else:
-            p[0] = [p[1],p[2]]
+            p[0] = p[2]
 
     else:
+
         p[0] = p[1]
+
+
 
 
 def p_field_description(p):
@@ -1222,20 +1268,6 @@ def p_tag_rule(p):
         p[0] = p[2]
 
 
-class Field(Expr):
-
-    def __init__(self, name, tag, languages, description, typeOf, modifiers = None):
-        self.type = "Field"
-        self.name  = name
-        self.tag = tag
-        self.languages = languages
-        self.description = description
-        self.typeOf = typeOf
-        self.modifiers = modifiers
-
-
-    def __repr__(self):
-        return u"Field: %s Type: %s  Tag: %s " % (self.name, self.typeOf, self.tag)
 
 
 
@@ -1247,41 +1279,36 @@ def p_fields_declaration(p):
                        | identifier_list  COLON type_denoter
                        | IDENTIFIER TAG enum_languages_list field_description COLON type_denoter COMMA tmodifiers_list
                        | IDENTIFIER TAG enum_languages_list field_description COLON type_denoter
+
     '''
 
 
     items = []
 
     if p.slice[1].type == "identifier_list":
-
         #def __init__(self, name, tag, languages, description, typeOf, modifiers = None):
-
         if p[1] != None:
             if isinstance(p[1],list):
                 for i in p[1]:
-                    if p.slice[2].type == 'COLON' and len(p.slice) > 4:
-                        items.append(Field(i,None,None,None, p[3],p[4]))
-                    elif p.slice[2].type == 'COLON':
-                        items.append(Field(i,None,None,None,p[3]))
+                    items.append(i)
 
-                    elif p.slice[2].type == 'field_description':
-                        items.append(Field(i,None,None, p[2],p[4]))
-
-                    else:
-                        items.append(Field(i,p[2],p[3],p[4],p[6]))
-
-            else:
-                items.append(Field(p[1],None,None,None,p[3]))
+        if p.slice[2].type == 'COLON' and len(p.slice) > 4:
+            items.append(Field(p[1],None,None,None, p[3],p[4]))
+        elif p.slice[2].type == 'COLON':
+            items.append(Field(p[1],None,None,None,p[3]))
+        elif p.slice[2].type == 'field_description':
+            items.append(Field(p[1],None,None, p[2],p[4]))
+        else:
+            items.append(Field(p[1],p[2],p[3],p[4],p[6]))
 
         p[0] = items
 
     else:
 
-        if p.slice[1] == "IDENTIFIER" and len(p) > 6:
-            p[0] = Field(Identifier(p[1]), p[2], p[3], p[4], p[5], p[6])
-
-        elif p.slice[1] == "IDENTIFIER":
-            p[0] = Field(Identifier(p[1]), p[2], p[3], p[4], p[5])
+        if p.slice[1].type == "IDENTIFIER" and len(p) > 6:
+            p[0] = Field(Identifier(p[1]), p[2], p[3], p[4], p[6])
+        elif p.slice[1].type == "IDENTIFIER":
+            p[0] = Field(Identifier(p[1]), p[2], p[3], p[4], p[6])
 
 
 def p_parameters_declaration_part(p):
@@ -1760,7 +1787,7 @@ def p_procedure_statement(p):
     '''
 
     if len(p) > 2:
-        p[0] = CallProc(p[0],p[1])
+        p[0] = CallProc(p[1],p[2])
     else:
         p[0] = CallProc(p[1])
 
@@ -1807,8 +1834,23 @@ def p_statement_list(p):
                         | statement
       '''
 
+    items = []
+
     if len(p) > 2:
-        p[0] = [p[1]] + [p[2]]
+        if p[1] != None and isinstance(p[1], list):
+
+            for i in p[1]:
+                items.append(i)
+
+            items.append(p[2])
+            p[0] = items
+
+        elif p[1] != None:
+            p[0] = [p[1],p[2]]
+        else:
+            p[0] = p[2]
+
+
     else:
         p[0] = p[1]
 
@@ -1981,5 +2023,3 @@ pprint.pprint(result,width=120)
 #        print e
 
 
-for i in result[1][0].value:
-    print i
