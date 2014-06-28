@@ -547,6 +547,7 @@ def p_procedure_and_block_declaration_part(p):
 
     '''
 
+
     p[0] = p[1]
 
 
@@ -579,8 +580,6 @@ class Field(Expr):
         self.description = description
         self.typeOf = typeOf
         self.modifiers = modifiers
-        print typeOf
-
 
     def __repr__(self):
         return u"Field: %s Type: %s  Tag: %s " % (self.name, self.typeOf, self.tag)
@@ -757,7 +756,7 @@ def p_type_array(p):
     if len(p) > 2:
         p[0] = int(p[2])
     else:
-        p[0] = 0
+        p[0] = int(0)
 
 
 
@@ -808,7 +807,7 @@ def p_enumerated_type(p):
         enumerated_type : LPAREN enumerated_list RPAREN COMMA tmodifiers_list
                         | LPAREN enumerated_list RPAREN
     '''
-    p[0] = ('enumerated', p[3])
+    p[0] = ('enumerated', p[2])
 
 
 
@@ -1114,7 +1113,7 @@ def p_rules_part(p):
     else:
         p[0] = p[1]
 
-    print p[0]
+
 
 def p_locals_part(p):
     r'''
@@ -1130,20 +1129,21 @@ def p_locals_part(p):
     else:
         p[0] = p[1]
 
+    print p[0]
 
 def p_fields_part(p):
     r'''
         fields_part : FIELDS fields_declaration_list
                     | auxfields_part
     '''
-    print "\tFIELDS"
+    #print "\tFIELDS"
 
     if len(p) > 2:
         p[0] = p[2]
     else:
         p[0] = p[1]
 
-    print p[0]
+    #print p[0]
 
 
 def p_auxfields_part(p):
@@ -1157,22 +1157,43 @@ def p_auxfields_part(p):
     else:
         p[0] = p[1]
 
-    print "\tAUXFIELDS"
+    #print "\tAUXFIELDS"
 
-    print p[0]
+    #print p[0]
 
 def p_optional_sections_list(p):
     '''
         optional_sections_list : optional_sections_list optional_sections
                                | optional_sections
     '''
+    items = []
 
     if len(p) > 2:
-        if p[1] != None:
-            p[0] = p[1] + [p[2]]
+
+        if p[1] != None and p[2] != None and isinstance(p[1],list) and isinstance(p[2],list):
+            p[0] = p[1] + p[2]
+        elif p[1] != None and isinstance(p[1], list):
+           for i in p[1]:
+              items.append(i)
+           items.append(p[2])
+           p[0] = items
+        elif p[2] != None and isinstance(p[2], list) and p[1] != None:
+            for i in p[1]:
+                items.append(i)
+            items.push(p[1])
+            p[0] = items
+        elif p[1] != None:
+            if isinstance(p[2],list):
+                p[0] =  [p[1]] + p[2]
+            else:
+                p[0] = [p[1],p[2]]
+
+
         else:
             p[0] = p[2]
+
     else:
+
         p[0] = p[1]
 
 
@@ -1186,6 +1207,7 @@ def p_procedure_block(p):
     r'''
             procedure_block : optional_sections_list
     '''
+    print type(p[1])
     p[0] = p[1]
 
 
@@ -1232,13 +1254,8 @@ def p_fields_declaration_list(p):
         elif p[1] != None:
             if isinstance(p[2],list):
                 p[0] =  [p[1]] + p[2]
-                print p[0]
-                print  [p[1]] + p[2]
             else:
                 p[0] = [p[1],p[2]]
-                print p[0]
-                print [p[1],p[2]]
-
         else:
             p[0] = p[2]
 
@@ -1318,7 +1335,9 @@ def p_parameters_declaration_part(p):
     '''
     print "\t\tPARAMETERS"
 
+
     if len(p) > 2:
+        print p[2]
         p[0] = p[2]
     else:
         p[0] = p[1]
@@ -1332,33 +1351,42 @@ def p_statement_part(p):
 
 def p_parameters_declaration_list(p):
     r'''
-            parameters_declaration_list : parameters_declaration_list parameter_declaration
+            parameters_declaration_list : parameter_declaration parameters_declaration_list
                                         | parameter_declaration
+
     '''
 
+    items = []
+    print "\t\tPARAM DECLARATION"
     if len(p) > 2:
-        if isinstance(p[1], list) and isinstance(p[2],list):
+
+        print p[1], p[2]
+
+        if p[1] != None and p[2] != None and isinstance(p[1],list) and isinstance(p[2],list):
             p[0] = p[1] + p[2]
         elif p[1] != None and isinstance(p[1], list):
-            p[0] = p[1].append(p[2])
-        elif p[1] != None and isinstance(p[2],list):
-            p[0] = [p[1]] + p[2]
-        elif p[1] != None and p[2] != None:
-            p[0] = [p[1],p[2]]
-        elif p[1] != None and p[2] == None:
-            p[0] = p[1]
+           for i in p[1]:
+              items.append(i)
+           items.append(p[2])
+           p[0] = items
+
+        elif p[1] != None:
+            if isinstance(p[2],list):
+                p[0] =  [p[1]] + p[2]
+            else:
+                p[0] = [p[1],p[2]]
         else:
             p[0] = p[2]
+
     else:
         p[0] = p[1]
-
 
 
 def p_parameter_declaration(p):
     r'''
               parameter_declaration : parameter_modifiers identifier_list COLON type_denoter
-                                    | procedure_declaration
                                     | block_declaration
+                                    | procedure_declaration
 
     '''
 
@@ -1366,15 +1394,18 @@ def p_parameter_declaration(p):
 
 
     if len(p) > 2 and p.slice[2].type == 'identifier_list':
-
+        print "INSIDE PARAMS: ", p[1], p[2], p[4]
         if p[2] != None and isinstance(p[2], list):
             for i in p[2]:
                  #def __init__(self, name, typepar, modifiers):
                 items.append(Parameter(i,p[4], p[1]))
+
+            items.append(Parameter(p[2],p[4],p[1]))
             p[0] = items
         else:
             p[0] = items.append(Parameter(p[2],p[4],p[1]))
     else:
+
         p[0] = p[1]
 
 
@@ -1947,7 +1978,7 @@ def p_if_statement(p):
 
     #| IF boolean_expression THEN statement_list else_statement_list ENDIF
 
-    print p[0]
+    #print p[0]
 
 def p_else_statement_list(p):
     r'''
@@ -1964,7 +1995,7 @@ def p_else_statement_list(p):
     else:
         p[0] = ElseStatement(p[2])
 
-    print p[0]
+    #print p[0]
 
 
 
