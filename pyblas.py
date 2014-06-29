@@ -22,7 +22,7 @@ def stdout_encode(u, default='iso8859'):
 
 data = None
 
-with codecs.open("hrs_c.txt", encoding='iso8859') as fl:
+with codecs.open("hrs_typ.txt", encoding='iso8859') as fl:
         data=fl.read()
 
 
@@ -109,7 +109,9 @@ vars = {}
 states = (
   ('ccode','exclusive'),
   ('fillcode', 'exclusive'),
-  ('layoutcode', 'exclusive'),)
+  ('layoutcode', 'exclusive'),
+  ('typecode', 'inclusive'),
+    )
 
 tokens = [
     "RULES",
@@ -147,7 +149,8 @@ tokens = [
     "PIPE",
     "PLUS",
     "DIFF",
-    "TYPE"
+    "TYPE",
+    "YEAR"
 ]
 
 reserved = {
@@ -202,7 +205,7 @@ reserved = {
 'STR' : 'STR',
 'SUBSTRING'  : 'SUBSTRING',
 'RANDOM' : 'RANDOM',
-'YEAR' : 'YEAR'
+
 
 }
 
@@ -240,6 +243,71 @@ t_ccode_ignore = ' \t'
 
 def t_ccode_error(t):
     t.lexer.skip(1)
+
+
+
+
+
+
+
+
+
+
+def t_typecode(t):
+    r'\{'
+    t.lexer.code_start = t.lexer.lexpos        # Record the starting position
+    t.lexer.level = 1                          # Initial brace level
+    t.lexer.begin('typecode')                     # Enter 'ccode' state
+    print "here"
+def t_typecode_TYPE(t):
+    r'[Tt][Yy][Pp][Ee]\s'
+    print "here 2"
+    t.lexer.level +=1
+
+def t_typecode_END(t):
+    r'[Rr][Uu][Ll][Ee][Ss]|[Ff][Ii][Ee][Ll][Dd][Ss]'
+    t.lexer.level -=1
+    # If closing brace, return the code fragment
+    if t.lexer.level == 0:
+         t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos-1]
+         t.type = "COMMENT"
+         t.lexer.lineno += t.value.count('\n')
+         t.lexer.begin('INITIAL')
+         pass
+
+
+t_typecode_ignore = ' \t'
+
+
+def t_typecode_error(t):
+    t.lexer.skip(1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def t_layoutcode(t):
@@ -351,6 +419,17 @@ def t_RULES(t):
     r'[Rr][Uu][Ll][Ee][Ss]'
     return t
 
+
+def t_YEAR(t):
+    r'{Y}{E}{A}{R}'
+    return t
+
+
+def t_typecode_YEAR(t):
+    r'{Y}{E}{A}{R}'
+    return t
+
+
 def t_fillcode_error(t):
     t.lexer.skip(1)
 
@@ -363,10 +442,6 @@ def t_ENDBLOCK(t):
     r'[Ee][Nn][Dd][Bb][Ll][Oo][Cc][Kk]'
     return t
 
-def t_TYPE(t):
-    r'[Tt][Yy][Pp][Ee]'
-    print "TOKEN TYPE"
-    return t
 
 def t_DIFF(t):
     r'<>'
@@ -483,6 +558,11 @@ def t_LESSTHAN(t):
     r'<'
     return t
 
+def t_TYPE(t):
+    r'[Tt][Yy][Pp][Ee]\s'
+    print "TOKEN TYPE"
+    return t
+
 
 
 def t_IDENTIFIER(t):
@@ -490,6 +570,9 @@ def t_IDENTIFIER(t):
     t.type = reserved.get(string.upper(t.value), 'IDENTIFIER')
     #print t
     return t
+
+
+
 
 def t_LPAREN(t):
     u"\("
@@ -527,7 +610,6 @@ lexer.input(data)
 precedence = (
     ('left', 'PLUS', 'MINUS'),
     ('left', 'MULT', 'DIVIDE', 'MOD'),
-    ('right', 'UMINUS'),
 )
 
 
@@ -565,7 +647,8 @@ def p_procedure_or_block_declaration_list(p):
 # this is where we need to add blocks
 def p_proc_or_block_declaration(p):
     r'''
-            proc_or_block_declaration : auxfields_declaration
+            proc_or_block_declaration :   type_definition_part
+                                       |  auxfields_declaration
                                        | procedure_declaration
                                        | block_declaration
 
@@ -887,11 +970,23 @@ def p_numeric_type(p):
 
 def p_subrange_type(p):
     '''
-        subrange_type : numeric_type DOTDOT numeric_type
+        subrange_type : sign numeric_type DOTDOT sign numeric_type
+                        | sign numeric_type DOTDOT  numeric_type
+                        | numeric_type DOTDOT sign numeric_type
+                        | numeric_type DOTDOT  numeric_type
 
     '''
 
-    p[0] = TypeRange("Range", p[1], p[3])
+    if len(p) > 4:
+        if p.slice[1].type == 'sign' and p.slice[4] == 'sign':
+            p[0] = TypeRange("Range", str(p[4])+str(p[5]), str(p[1])+str(p[2]))
+        else:
+            p[0] = TypeRange("Range", str(p[4]), str(p[1])+str(p[2]))
+    else:
+        if p.slice[3].type == 'sign':
+            p[0] = TypeRange("Range",  str(p[2])+str(p[3]), p[1])
+        else:
+            p[0] = TypeRange("Range",  p[3], p[1])
 
 
 def p_new_structured_type(p):
@@ -1084,12 +1179,24 @@ def p_type_definition_list(p):
 
 def p_type_definition(p):
     r'''
-        type_definition : IDENTIFIER COMPARE type_denoter tmodifiers_list
+        type_definition : IDENTIFIER COMPARE LPAREN identifier_list RPAREN COMMA tmodifiers_list
+                        | IDENTIFIER COMPARE LPAREN identifier_list RPAREN
+                        | IDENTIFIER COMPARE type_denoter COMMA tmodifiers_list
                         | IDENTIFIER COMPARE type_denoter
+
     '''
 
-    if len(p) > 4:
-        p[0] = TypeC(p[1], p[3], p[4])
+#   | IDENTIFIER COMPARE type_denoter tmodifiers_list
+
+    print p.slice
+
+    if len(p) > 6 :
+        p[0] = TypeC(p[1], p[4], p[7])
+    elif len(p) == 5 and p.slice[5].type == 'RPAREN':
+        p[0] = TypeC(p[1], p[4], None)
+    elif len(p) == 5 and p.slice[5].type == 'tmodifiers_list':
+
+        p[0] = TypeC(p[1], p[4], p[5])
     else:
         p[0] = TypeC(p[1], p[3])
 
@@ -1448,21 +1555,34 @@ def p_parameter_declaration(p):
 
 
     if len(p) > 2 and p.slice[2].type == 'identifier_list':
-        print "INSIDE PARAMS: ", p[1], p[2], p[4]
         if p[2] != None and isinstance(p[2], list):
             for i in p[2]:
                 items.append(i)
                  #def __init__(self, name, typepar, modifiers)
                  # :
-            print "ooooooooooooooooooooooooooooooo"
-            print p[1]
-            if p[1] == None or p[1] == "":
-                p[1] = "IMPORT"
-            p[0] = Parameter(items,p[4], p[1])
+
+            paramType = p[1]
+
+
+            if type(p[1]) == None or p[1] == "":
+                paramType = "IMPORT"
+            p[0] = Parameter(items,p[4], paramType)
         else:
-            p[0] = Parameter(p[2],p[4],p[1])
+            paramType = p[1]
+
+            import types
+            if type(p[1]) == types.NoneType or p[1] == "":
+                paramType = "IMPORT"
+
+            p[0] = Parameter(p[2],p[4],paramType)
     else:
-        p[0] = p[1]
+
+        paramType = p[1]
+
+        if p[1] == None or p[1] == "":
+            paramType = "IMPORT"
+
+        p[0] = paramType
 
 
 
@@ -1676,7 +1796,6 @@ def p_built_in_functions(p):
 
 
 
-
 def p_primary(p):
     r'''
         primary : variable_access
@@ -1758,7 +1877,7 @@ def p_member_designator(p):
 # member_designator DOTDOT expression tmodifiers_list
 
     if p.slice[1].type == 'member_designator':
-        p[0] = TypeRange(None, p[1],p[2])
+        p[0] = TypeRange(None, p[1],p[3])
     else:
         p[0] = p[1]
 
