@@ -26,6 +26,14 @@ with codecs.open("hrs_typ.txt", encoding='iso8859') as fl:
         data=fl.read()
 
 
+
+with codecs.open("hrs_c.txt", encoding='iso8859') as fl:
+        data2=fl.read()
+
+
+data = data + data2
+
+
 class Symbol: pass
 
 
@@ -110,7 +118,8 @@ states = (
   ('ccode','exclusive'),
   ('fillcode', 'exclusive'),
   ('layoutcode', 'exclusive'),
-  ('typecode', 'inclusive'),
+  ('typecode', 'inclusive')
+
     )
 
 tokens = [
@@ -154,7 +163,7 @@ tokens = [
 ]
 
 reserved = {
- 'CHECK' : 'CHECK',
+'CHECK' : 'CHECK',
 'IF' : 'IF' ,
 'THEN' : 'THEN',
 'ELSE' : 'ELSE',
@@ -205,8 +214,7 @@ reserved = {
 'STR' : 'STR',
 'SUBSTRING'  : 'SUBSTRING',
 'RANDOM' : 'RANDOM',
-
-
+'SYSDATE' : 'SYSDATE',
 }
 
 
@@ -245,65 +253,44 @@ def t_ccode_error(t):
     t.lexer.skip(1)
 
 
-
-
-
-
-
-
-
-
 def t_typecode(t):
-    r'\{'
+    r'[Tt][Yy][Pp][Ee]\s'
     t.lexer.code_start = t.lexer.lexpos        # Record the starting position
-    t.lexer.level = 1                          # Initial brace level
-    t.lexer.begin('typecode')                     # Enter 'ccode' state
-    print "here"
+    t.lexer.push_state('typecode')                  # Enter 'ccode' state
+    t.type = "TYPE"
+    print "typecode state"
+    return t
+
 def t_typecode_TYPE(t):
     r'[Tt][Yy][Pp][Ee]\s'
-    print "here 2"
-    t.lexer.level +=1
+    print "here"
+    t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos+1]
+    t.type = "TYPE"
+    t.lexer.lineno += t.value.count('\n')
+    return t
 
-def t_typecode_END(t):
-    r'[Rr][Uu][Ll][Ee][Ss]|[Ff][Ii][Ee][Ll][Dd][Ss]'
-    t.lexer.level -=1
-    # If closing brace, return the code fragment
-    if t.lexer.level == 0:
-         t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos-1]
-         t.type = "COMMENT"
-         t.lexer.lineno += t.value.count('\n')
-         t.lexer.begin('INITIAL')
-         pass
 
+def t_TYPECODE_YEAR(t):
+    r'[Yy][Ee][Aa][Rr]\s'
+    print "here"
+    t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos+1]
+    t.type = "IDENTIFIER"
+    t.lexer.lineno += t.value.count('\n')
+    t.lexer.pop_state()
+    return t
+
+def t_typecode_error(t):
+     t.lexer.skip(1)
 
 t_typecode_ignore = ' \t'
 
 
-def t_typecode_error(t):
-    t.lexer.skip(1)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def t_INITIAL_YEAR(t):
+    r'[Yy][Ee][Aa][Rr]'
+    print 'initial year'
+    t.type = "YEAR"
+    return t
 
 
 
@@ -419,15 +406,6 @@ def t_RULES(t):
     r'[Rr][Uu][Ll][Ee][Ss]'
     return t
 
-
-def t_YEAR(t):
-    r'{Y}{E}{A}{R}'
-    return t
-
-
-def t_typecode_YEAR(t):
-    r'{Y}{E}{A}{R}'
-    return t
 
 
 def t_fillcode_error(t):
@@ -647,7 +625,7 @@ def p_procedure_or_block_declaration_list(p):
 # this is where we need to add blocks
 def p_proc_or_block_declaration(p):
     r'''
-            proc_or_block_declaration :   type_definition_part
+            proc_or_block_declaration :   type_declaration
                                        |  auxfields_declaration
                                        | procedure_declaration
                                        | block_declaration
@@ -811,6 +789,16 @@ class Auxfields(Expr):
         return u"Auxfields Block %s" % str(self.value)
 
 
+class TypeDefinition(Expr):
+    def __init__(self, value):
+        self.type = "Type Definition"
+        self.value = value
+
+    def __repr__(self):
+        return u"TypeDefinition Block %s" % str(self.value)
+
+
+
 def p_auxfields_declaration(p):
     r'''
         auxfields_declaration : AUXFIELDS fields_declaration_list
@@ -818,6 +806,18 @@ def p_auxfields_declaration(p):
     '''
 
     p[0] = Auxfields(p[2])
+
+
+
+def p_type_declaration(p):
+    r'''
+                type_declaration : TYPE type_definition_list
+
+    '''
+
+    print p[2]
+    p[0] = TypeDefinition(p[2])
+
 
 def p_procedure_identification(p):
     r'''
@@ -887,34 +887,44 @@ def p_new_ordinal_type(p):
 
     p[0] = p[1]
 
-def p_enum(p):
-    '''
-            p_enum : LPAREN enumerated_list RPAREN
-        '''
+class Enumerated(Expr):
 
-    p[0] = p[2]
+    def __init__(self, value):
+        self.type = "Enumerated"
+        self.value = value
+
+    def __repr__(self):
+        return u"Enumerated %s" % self.value
+
+
 
 def p_enumerated_type(p):
     '''
-        enumerated_type : p_enum xprepeat
-
+        enumerated_type : LPAREN enumerated_list RPAREN
     '''
-    p[0] = ('enumerated', p[1])
 
 
-def p_xprepeat(p):
-                '''
-                xprepeat :
-               | COMMA tmodifiers_list
-'''
+
+    items = []
+
+    if p[2] != None and isinstance(p[2], list):
+        for i in p[2]:
+            items.append(i)
+        p[0] = Enumerated(items)
+    else:
+        p[0] = Enumerated([2])
+
+
+
+
+
 
 def p_enum_languages_list(p):
     r'''
         enum_languages_list :  enum_languages_list LITERAL
-                        | LITERAL
+                            | LITERAL
 
     '''
-
 
     items = []
     if len(p) > 2:
@@ -944,15 +954,35 @@ def p_enum_num_arg(p):
         p[0] = p[2]
 
 
+class TypeEnumeratedItem(Expr):
+
+    def __init__(self, name, value, languages):
+        self.type = "EnumeratedItem"
+        self.name = name
+        self.languages = languages
+        self.values = value
+
+    def __repr__(self):
+        return u"EnumeratedItem %s %s"  % (self.name, self.values)
+
+
 def p_enumerated_list(p):
     r'''
         enumerated_list : IDENTIFIER enum_num_arg enum_languages_list COMMA enumerated_list
                         | IDENTIFIER enum_num_arg enum_languages_list
-
     '''
 
+    items = []
 
+    if len(p) > 5:
+        if p[1] != None and isinstance(p[5], list) and p[5] != None:
+            for i in p[5]:
+                items.append(i)
 
+        items.insert(0, TypeEnumeratedItem(p[1], p[2], p[3]))
+        p[0] = items
+    else:
+        p[0] = [TypeEnumeratedItem(p[1], p[2], p[3])]
 
 
 
@@ -1186,17 +1216,15 @@ def p_type_definition(p):
 
     '''
 
-#   | IDENTIFIER COMPARE type_denoter tmodifiers_list
 
-    print p.slice
+
 
     if len(p) > 6 :
         p[0] = TypeC(p[1], p[4], p[7])
-    elif len(p) == 5 and p.slice[5].type == 'RPAREN':
+    elif len(p) == 6 and p.slice[5].type == 'RPAREN':
         p[0] = TypeC(p[1], p[4], None)
-    elif len(p) == 5 and p.slice[5].type == 'tmodifiers_list':
-
-        p[0] = TypeC(p[1], p[4], p[5])
+    elif len(p) == 6 and p.slice[5].type == 'tmodifiers_list':
+        p[0] = TypeC(p[1], p[3], p[5])
     else:
         p[0] = TypeC(p[1], p[3])
 
@@ -1262,7 +1290,6 @@ def p_rules_part(p):
 def p_locals_part(p):
     r'''
         locals_part : LOCALS locals_declaration_list
-                    | type_definition_part
                     | fields_part
 
     '''
@@ -1791,6 +1818,7 @@ def p_built_in_functions(p):
                                | RANDOM
                                | YEAR
 
+
     '''
     p[0] =  p[1]
 
@@ -1803,6 +1831,7 @@ def p_primary(p):
                 | set_constructor
                 | COUNT
                 | FLOAT
+                | SYSDATE
                 | LPAREN expression RPAREN
                 | built_in_functions LPAREN index_expression_list RPAREN
 
@@ -2080,6 +2109,8 @@ def p_statement(p):
                     | check_statement
                     | signal_statement
                     | not_statement
+
+
 
 
     '''
