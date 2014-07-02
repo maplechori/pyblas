@@ -32,21 +32,21 @@ with codecs.open("hrs_c.txt", encoding='iso8859') as fl:
         data3=fl.read()
 
 
-data =   data2
+data =  data +  data2 + data3
+
+data = "AUXFIELDS A : STRING[20] BLOCK TACOS PARAMETERS IMPORT T : STRING BLOCK MEXICO RULES A := 1 B := A * A ENDBLOCK FIELDS Hearingaid: BC_Hearingaid RULES  IF 3 > 5 THEN Stupid ENDIF ENDBLOCK"
 
 def new_scope():
     return {}
 
-levelScope = -1
-symbolTable = {}
+levelScope = 0
+symbolTable = {0 : new_scope()}
 
 def push_scope(scope):
     global levelScope, symbolTable
 
     levelScope += 1
 
-    print symbolTable, " "
-    print "[pushScope][" + str(levelScope) + "]"
 
     if not symbolTable.has_key(levelScope):
         symbolTable[levelScope] = scope
@@ -58,8 +58,6 @@ def pop_scope():
 
     global levelScope, symbolTable
     levelScope -= 1
-    print "[popScope][" + str(levelScope) + "]"
-    print symbolTable
 
 
 
@@ -142,15 +140,6 @@ class Parameter(Expr):
 
 
 state_in_types = 0
-global_vars = {}
-
-
-vars_scope = [global_vars]
-
-
-global_methods = {}
-
-
 
 states = (
   ('ccode','exclusive'),
@@ -616,7 +605,7 @@ def p_proc_or_block_declaration(p):
 class Field(Expr):
 
     def __init__(self, name, tag, languages, description, typeOf, modifiers = None):
-        self.type = "Field"
+        self.type = "FIELD"
         self.name  = name
         self.tag = tag
         self.languages = languages
@@ -630,7 +619,7 @@ class Field(Expr):
 
 class BinOp(Expr):
     def __init__(self,left,op,right):
-        self.type = "binop"
+        self.type = "BINOP"
         self.left = left
         self.right = right
         self.op = op
@@ -660,7 +649,7 @@ class IfStatement(Expr):
 
 class IfElseStatement(Expr):
     def __init__(self,first, second, third):
-        self.type = "IF ELSE"
+        self.type = "IFELSE"
         self.first = first
         self.second = second
         self.third = third
@@ -691,7 +680,7 @@ class ElseStatement(Expr):
 
 class Unary(Expr):
     def __init__(self,op,value):
-        self.type = "Unary"
+        self.type = "UNARY"
         self.value = value
         self.op = op
 
@@ -717,7 +706,7 @@ class Not(Expr):
 
 class Procedure(Expr):
     def __init__(self,name, value):
-        self.type = "Procedure"
+        self.type = "PROCEDURE"
         self.name = name
         self.value = value
 
@@ -732,18 +721,15 @@ def p_procedure_declaration(p):
     '''
     global symbolTable
     global levelScope
-    print symbolTable, " ", levelScope
 
-    for i in symbolTable.keys():
-        print "key: ", i
 
-    symbolTable[levelScope][p[1]] = p[2]
-    p[0] = Procedure(p[1], p[2])
+    symbolTable[levelScope][p[1]] = p[3]
+    p[0] = Procedure(p[1], p[3])
     pop_scope()
 
 class Block(Expr):
     def __init__(self,name, value):
-        self.type = "Block"
+        self.type = "BLOCK"
         self.name = name
         self.value = value
 
@@ -751,10 +737,9 @@ class Block(Expr):
         return u"Block %s %s" % (self.name, self.value)
 
 
-
 class SetIn(Expr):
     def __init__(self,value):
-        self.type = "SetIn"
+        self.type = "SETIN"
         self.value = value
 
     def __repr__(self):
@@ -765,16 +750,16 @@ def p_block_declaration(p):
         block_declaration : block_identification new_scope procedure_block ENDBLOCK
     '''
     global symbolTable, levelScope
-    symbolTable[levelScope][p[1]] = p[2]
+    symbolTable[levelScope][p[1]] = p[3]
 
-    print "BLOCK: " , p[1]
-    p[0] = Block(p[1], p[2])
+    #print "BLOCK: " , p[1]
+    p[0] = Block(p[1], p[3])
     pop_scope()
 
 
 class Auxfields(Expr):
     def __init__(self, value):
-        self.type = "Auxfields"
+        self.type = "AUXFIELDS"
         self.value = value
 
     def __repr__(self):
@@ -783,7 +768,7 @@ class Auxfields(Expr):
 
 class TypeDefinition(Expr):
     def __init__(self, value):
-        self.type = "Type Definition"
+        self.type = "TYPEDEF"
         self.value = value
 
     def __repr__(self):
@@ -791,11 +776,19 @@ class TypeDefinition(Expr):
 
 def p_auxfields_declaration(p):
     r'''
-        auxfields_declaration : AUXFIELDS fields_declaration_list
+        auxfields_declaration : AUXFIELDS new_scope fields_declaration_list
 
     '''
 
-    p[0] = Auxfields(p[2])
+    global symbolTable
+    global levelScope
+    #print symbolTable, " ", levelScope
+
+    symbolTable[levelScope][p[1]] = p[3]
+    p[0] = Auxfields(p[3])
+    pop_scope()
+
+
 
 def p_type_declaration(p):
     r'''
@@ -874,7 +867,7 @@ def p_new_ordinal_type(p):
 class Enumerated(Expr):
 
     def __init__(self, value):
-        self.type = "Enumerated"
+        self.type = "ENUMERATED"
         self.value = value
 
     def __repr__(self):
@@ -941,7 +934,7 @@ def p_enum_num_arg(p):
 class TypeEnumeratedItem(Expr):
 
     def __init__(self, name, value, languages):
-        self.type = "EnumeratedItem"
+        self.type = "ENUMERATEDITEM"
         self.name = name
         self.languages = languages
         self.values = value
@@ -993,14 +986,14 @@ def p_subrange_type(p):
 
     if len(p) > 4:
         if p.slice[1].type == 'sign' and p.slice[4] == 'sign':
-            p[0] = TypeRange("Range", str(p[4])+str(p[5]), str(p[1])+str(p[2]))
+            p[0] = TypeRange("RANGE", str(p[4])+str(p[5]), str(p[1])+str(p[2]))
         else:
-            p[0] = TypeRange("Range", str(p[4]), str(p[1])+str(p[2]))
+            p[0] = TypeRange("RANGE", str(p[4]), str(p[1])+str(p[2]))
     else:
         if p.slice[3].type == 'sign':
-            p[0] = TypeRange("Range",  str(p[2])+str(p[3]), p[1])
+            p[0] = TypeRange("RANGE",  str(p[2])+str(p[3]), p[1])
         else:
-            p[0] = TypeRange("Range",  p[3], p[1])
+            p[0] = TypeRange("RANGE",  p[3], p[1])
 
 
 def p_new_structured_type(p):
@@ -1023,7 +1016,7 @@ def p_structured_type(p):
 class Array(Expr):
 
     def __init__(self, size, array_t = None):
-            self.type = "Array"
+            self.type = "ARRAY"
             self.array_type = array_t
             self.size = size
 
@@ -1145,7 +1138,7 @@ def p_identifier_list(p):
 class TypeLocal(TypeC):
 
     def __init__(self, name, value, modifiers = None):
-            self.type = "TypeLocal"
+            self.type = "TYPELOCAL"
             self.name =  name
             self.value = value
             self.modifiers = modifiers
@@ -1183,7 +1176,7 @@ def p_locals_declaration(p):
     if p[1] != None and isinstance(p[1],list):
         for i in p[1]:
             items.append(i)
-            symbolTable[levelScope][str(i.name)] = i
+            symbolTable[levelScope][str(i.name)] = TypeLocal(i.name,TypeDenoter(p[3]) )
 
         p[0] =  TypeLocal( items, TypeDenoter(p[3]) )
 
@@ -1326,7 +1319,7 @@ def p_locals_part(p):
 
 
     if len(p) > 2:
-        p[0] = p[2]
+        p[0] = p[3]
         pop_scope()
 
     else:
@@ -1419,7 +1412,7 @@ def p_procedure_block(p):
 
 class ParamModifier(Expr):
     def __init__(self, value):
-        self.type = "ParamModifier"
+        self.type = "PARAMMODIFIER"
         self.value = value
 
         if value == None:
@@ -1987,7 +1980,7 @@ def p_variable_access(p):
 
 class IndexedVariable(Expr):
     def __init__(self, name, index):
-        self.type = "Indexed Variable"
+        self.type = "INDEXEDVARIABLE"
         self.name = name
         self.index = index
 
@@ -2033,7 +2026,7 @@ class FieldDesignator(Expr):
 
 
     def __init__(self, value, method):
-        self.type = "Keep"
+        self.type = "FIELDDESIGNATOR"
         self.value = value
         self.method = method
 
@@ -2056,7 +2049,7 @@ class Keep(Expr):
 
 
     def __init__(self, value):
-        self.type = "Keep"
+        self.type = "KEEP"
         self.value = value
 
     def __repr__(self):
@@ -2074,7 +2067,7 @@ def p_method_statement(p):
 
 class CallProc(Expr):
     def __init__(self, name, params = None):
-        self.type = "Call Procedure"
+        self.type = "CALLPROC"
         self.name = name
         self.params = params
 
@@ -2083,7 +2076,7 @@ class CallProc(Expr):
 
 class CallBuildIn(Expr):
     def __init__(self, name, params = None):
-        self.type = "Call BuildIn"
+        self.type = "CALLBUILD"
         self.name = name
         self.params = params
 
@@ -2171,7 +2164,7 @@ def p_statement_list(p):
 class ModuleCall(Expr):
 
     def __init__(self, name, index, params = None):
-        self.type = "ModuleCall"
+        self.type = "CALLMODULE"
         self.name = name
         self.index = index
         self.params = params
@@ -2252,7 +2245,7 @@ def p_for_statement(p):
 
 class InvolvingStatement(Expr):
     def __init__(self,name, value):
-        self.type = "InvolvingStatement"
+        self.type = "INVOLVING"
         self.name = name
         self.value = value
 
@@ -2285,7 +2278,7 @@ def p_involving_vars(p):
 
 class CheckStatement(Expr):
     def __init__(self,left, right = None, literal = None):
-        self.type = "CheckStatement"
+        self.type = "CHECK"
         self.left = left
         self.right = right
         self.literal = literal
@@ -2308,7 +2301,7 @@ def p_check_statement(p):
 
 class LayoutStatement(Expr):
     def __init__(self,left, right = None, literal = None):
-        self.type = "LayoutStatement"
+        self.type = "LAYOUT"
         self.left = left
         self.right = right
         self.literal = literal
@@ -2327,7 +2320,7 @@ def p_layout_statement(p):
 
 class SignalStatement(Expr):
     def __init__(self,left, right = None, literal = None):
-        self.type = "SignalStatement"
+        self.type = "SIGNAL"
         self.left = left
         self.right = right
         self.literal = literal
@@ -2348,7 +2341,7 @@ def p_signal_statement(p):
 
 class NotBinStatement(Expr):
     def __init__(self,left, right = None, literal = None):
-        self.type = "NotBinStatement"
+        self.type = "NOTBIN"
         self.left = left
         self.right = right
         self.literal = literal
@@ -2462,4 +2455,50 @@ result = parser.parse(s, debug=log)
 #        print e
 
 
-pprint.pprint(symbolTable)
+#pprint.pprint(symbolTable)
+pprint.pprint(result)
+
+def evaluateSubtree(node):
+
+
+    if isinstance(node,list):
+        for i in node:
+            print "c:", i
+            if hasattr(i, "value") and isinstance(i.value,list):
+                for x in i.value:
+                    print "b:", x
+#                    return evaluateSubtree(x)
+
+    else:
+        print "here"
+    #if not isinstance(node, int) and node.type == "BINOP":
+    #    print node.op
+    #    evaluateSubtree(node.left)
+    #    evaluateSubtree(node.right)
+
+    #if (hasattr(node,"value")):
+    #    evaluateSubtree(node.value)
+
+
+
+
+
+
+"""
+       op = x.left.op
+
+                if op == ">":
+                    if x.left.left < x.left.right:
+                        print "woo!"
+                if op == "<":
+                    if x.left.left < x.left.right:
+                        print "moo!"
+
+                #if x.left x.op x.right
+
+"""
+
+
+#print result[1]
+evaluateSubtree(result)
+
