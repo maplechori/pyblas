@@ -25,22 +25,52 @@ data = None
 with codecs.open("hrs_typ.txt", encoding='iso8859') as fl:
         data=fl.read()
 
-
-
-with codecs.open("hrs_c.txt", encoding='iso8859') as fl:
+with codecs.open("proc.txt", encoding='iso8859') as fl:
         data2=fl.read()
 
-
-data = data + data2
-
-
-class Symbol: pass
+with codecs.open("hrs_c.txt", encoding='iso8859') as fl:
+        data3=fl.read()
 
 
+data =   data2
+
+def new_scope():
+    return {}
+
+levelScope = -1
+symbolTable = {}
+
+def push_scope(scope):
+    global levelScope, symbolTable
+
+    levelScope += 1
+
+    print symbolTable, " "
+    print "[pushScope][" + str(levelScope) + "]"
+
+    if not symbolTable.has_key(levelScope):
+        symbolTable[levelScope] = scope
 
 
-class Expr: pass
 
+
+def pop_scope():
+
+    global levelScope, symbolTable
+    levelScope -= 1
+    print "[popScope][" + str(levelScope) + "]"
+    print symbolTable
+
+
+
+class Expr:
+    pass
+
+def p_new_scope(p):
+    "new_scope :"
+    # Create a new scope for local variables
+    scope = new_scope()
+    push_scope(scope)
 
 
 class UnsignedConstant(Expr):
@@ -105,22 +135,26 @@ class Parameter(Expr):
         self.name =  name
         self.modifiers = modifiers
 
+
     def __repr__(self):
         return u"Parameter: %s Modifiers: %s  - Type [%s]" % (self.name, self.modifiers, self.type)
 
 
 
+state_in_types = 0
+global_vars = {}
 
-vars = {}
+
+vars_scope = [global_vars]
+
+
+global_methods = {}
+
 
 
 states = (
   ('ccode','exclusive'),
-  ('fillcode', 'exclusive'),
-  ('layoutcode', 'exclusive'),
-  ('typecode', 'inclusive')
-
-    )
+  ('fillcode', 'exclusive'))
 
 tokens = [
     "RULES",
@@ -159,10 +193,13 @@ tokens = [
     "PLUS",
     "DIFF",
     "TYPE",
-    "YEAR"
+    "YEAR",
+
+
 ]
 
 reserved = {
+'PROCEDURE' : 'PROCEDURE',
 'CHECK' : 'CHECK',
 'IF' : 'IF' ,
 'THEN' : 'THEN',
@@ -173,7 +210,6 @@ reserved = {
 'ELSEIF' : 'ELSEIF',
 'ENDIF' : "ENDIF",
 'BLOCK' : "BLOCK",
-'PROCEDURE' : 'PROCEDURE',
 'AUXFIELDS':'AUXFIELDS',
 'IMPORT' : 'IMPORT',
 'EXPORT' : 'EXPORT',
@@ -211,17 +247,28 @@ reserved = {
 'SIGNAL' : 'SIGNAL',
 'MOD' : 'MOD',
 'LEN' : 'LEN',
+'VAL' : 'VAL',
 'STR' : 'STR',
 'SUBSTRING'  : 'SUBSTRING',
 'RANDOM' : 'RANDOM',
 'SYSDATE' : 'SYSDATE',
+'POSITION' : 'POSITION',
+"LAYOUT" : "LAYOUT",
+"FROM" : "FROM",
+"TO" : "TO",
+"FIELDPANE" :  "FIELDPANE"
+""
 }
 
 
 tokens += list(reserved.values())
 
-
 t_ignore = " \t\r"
+
+def t_newpage(t):
+    '[Nn][Ee][Ww][Pp][Aa][Gg][Ee]'
+    pass
+
 
 
 def t_ccode(t):
@@ -252,92 +299,42 @@ t_ccode_ignore = ' \t'
 def t_ccode_error(t):
     t.lexer.skip(1)
 
-
-def t_typecode(t):
+def t_TYPE(t):
     r'[Tt][Yy][Pp][Ee]\s'
-    t.lexer.code_start = t.lexer.lexpos        # Record the starting position
-    t.lexer.push_state('typecode')                  # Enter 'ccode' state
+    global state_in_types
+    state_in_types  = 1
     t.type = "TYPE"
-    print "typecode state"
-    return t
-
-def t_typecode_TYPE(t):
-    r'[Tt][Yy][Pp][Ee]\s'
-    print "here"
-    t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos+1]
-    t.type = "TYPE"
-    t.lexer.lineno += t.value.count('\n')
     return t
 
 
-def t_TYPECODE_YEAR(t):
-    r'[Yy][Ee][Aa][Rr]\s'
-    print "here"
-    t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos+1]
-    t.type = "IDENTIFIER"
-    t.lexer.lineno += t.value.count('\n')
-    t.lexer.pop_state()
-    return t
-
-def t_typecode_error(t):
-     t.lexer.skip(1)
-
-t_typecode_ignore = ' \t'
-
-
-
-def t_INITIAL_YEAR(t):
-    r'[Yy][Ee][Aa][Rr]'
-    print 'initial year'
+def t_YEAR(t):
+    r'[Y][E][A][R]'
     t.type = "YEAR"
+    t.value = "YEAR"
+    global state_in_types
+    if state_in_types == 1:
+        t.value = "IDENTIFIER"
+        t.type = "IDENTIFIER"
+
+
+    return t
+
+def t_LOCALS(t):
+    r'[Ll][Oo][Cc][Aa][Ll][Ss]\s'
+    t.type = "LOCALS"
+    t.value = "LOCALS"
+    global state_in_types
+    state_in_types = 0
     return t
 
 
-
-
-
-
-def t_layoutcode(t):
-    r'[Ll][Aa][Yy][Oo][Uu][Tt]'
-    t.lexer.code_start = t.lexer.lexpos        # Record the starting position
-    t.lexer.level = 1                          # Initial brace level
-    t.lexer.begin('layoutcode')
-    print "LAYOUT START"
-
-def t_layoutcode_TO(t):
-    r'[Tt][Oo]'
-    pass
-
-def t_layoutcode_ENDBLOCK(t):
-    r'[Ee][Nn[Dd][Bb][Ll][Oo][Cc][Kk]'
-    t.lexer.level -=1
-    # If closing brace, return the code fragment
-    if t.lexer.level == 0:
-        print "LAYOUT END"
-        t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos-1]
-        t.type = "COMMENT"
-        t.lexer.lineno += t.value.count('\n')
-        t.lexer.begin('INITIAL')
-        pass
-
-t_layoutcode_ignore = ' \t'
-
-def t_layoutcode_error(t):
-    t.lexer.skip(1)
-
-
-
-def t_layoutcode_RULES(t):
-    r'RULES'
-    t.lexer.level -=1
-    # If closing brace, return the code fragment
-    if t.lexer.level == 0:
-         t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos-1]
-         t.type = "COMMENT"
-         t.lexer.lineno += t.value.count('\n')
-         t.lexer.begin('INITIAL')
-         print "LAYOUT END"
-         pass
+def t_RULES(t):
+    r'[Rr][Uu][Ll][Ee][Ss]\s'
+    t.type = "RULES"
+    t.value="RULES"
+    global state_in_types
+    state_in_types = 0
+    return t
 
 lex_fill_positions = []
 
@@ -391,25 +388,16 @@ def t_fillcode_LITERAL(t):
 
     pass
 
-
-
-
 t_fillcode_ignore = ' \t'
+
+def t_fillcode_error(t):
+    t.lexer.skip(1)
 
 
 def t_TAG(t):
     u"\([A-Z][0-9]+[\.\d_A-Z]+\)"
     #print t.value
     return t
-
-def t_RULES(t):
-    r'[Rr][Uu][Ll][Ee][Ss]'
-    return t
-
-
-
-def t_fillcode_error(t):
-    t.lexer.skip(1)
 
 def t_ENDPROCEDURE(t):
     r'[Ee][Nn][Dd][Pp][Rr][Oo][Cc][Ee][Dd][Uu][Rr][Ee]'
@@ -458,8 +446,6 @@ def t_SEMI(t):
     r';'
     pass
 
-
-
 def t_COMMA(t):
     r','
     return t
@@ -480,26 +466,20 @@ def t_DIVIDE(t):
     r'/'
     return t
 
-
 def t_ASSIGN(t):
     r'\:\='
     return t
-
 
 def t_COLON(t):
     r'\:'
     return t
 
-
 def t_cr(t):
     r'\r+'
-
 
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += t.value.count("\n")
-
-
 
 def t_LBRACKET(t):
     r"\["
@@ -521,36 +501,28 @@ def t_EQUALMORETHAN(t):
     r'>='
     return t
 
-
 def t_COMPARE(t):
     r'='
     return t
-
 
 def t_MORETHAN(t):
     r'>'
     return t
 
-
 def t_LESSTHAN(t):
     r'<'
     return t
 
-def t_TYPE(t):
-    r'[Tt][Yy][Pp][Ee]\s'
-    print "TOKEN TYPE"
-    return t
-
-
+#def t_INITIAL_TYPE(t):
+#    r'[Tt][Yy][Pp][Ee]\s'
+#    print "TOKEN TYPE"
+#    return t
 
 def t_IDENTIFIER(t):
     ur"[\^a-zA-Z_\xF3][a-zA-Zραινσϊό0-9_\xF3]*"
     t.type = reserved.get(string.upper(t.value), 'IDENTIFIER')
     #print t
     return t
-
-
-
 
 def t_LPAREN(t):
     u"\("
@@ -564,14 +536,8 @@ def t_error(t):
     print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
-
 lexer = lex.lex(reflags=(re.UNICODE))
-
-
 lexer.input(data)
-
-
-
 
 #for tok in iter(lexer.token, None):
     #print tok.type,
@@ -590,7 +556,6 @@ precedence = (
     ('left', 'MULT', 'DIVIDE', 'MOD'),
 )
 
-
 start = 'codeblock'
 
 def p_codeblock(p):
@@ -598,19 +563,33 @@ def p_codeblock(p):
         codeblock : procedure_and_block_declaration_part codeblock
                   |  tempty
     '''
+
+    items = []
+
     if len(p) > 2:
-        p[0] = [p[1], p[2]]
 
+        if p[2] != None:
+            if isinstance(p[1],list):
+                for x in p[1]:
+                    items.append(x)
+            else:
+                items.append(p[1])
 
+            if isinstance(p[2],list):
+                for y in p[2]:
+                    items.append(y)
+            else:
+                items.append(p[2])
 
+            p[0] = items
+        else:
+            p[0] = p[1]
 
 def p_procedure_and_block_declaration_part(p):
     r'''
         procedure_and_block_declaration_part : procedure_or_block_declaration_list
 
     '''
-
-
     p[0] = p[1]
 
 
@@ -625,13 +604,13 @@ def p_procedure_or_block_declaration_list(p):
 # this is where we need to add blocks
 def p_proc_or_block_declaration(p):
     r'''
-            proc_or_block_declaration :   type_declaration
-                                       |  auxfields_declaration
+            proc_or_block_declaration :  type_declaration
+                                       | auxfields_declaration
                                        | procedure_declaration
                                        | block_declaration
 
+'''
 
-                                            '''
     p[0] = p[1]
 
 class Field(Expr):
@@ -661,7 +640,7 @@ class BinOp(Expr):
         if self.left != None and self.right != None:
             return u"L:%s %s R:%s" % (self.left, self.op,  self.right)
         else:
-            return "MISSING BINOP"
+            return "MISSING BINOP %s" % ( self.op )
 
 
 class IfStatement(Expr):
@@ -749,9 +728,18 @@ class Procedure(Expr):
 
 def p_procedure_declaration(p):
     r'''
-        procedure_declaration : procedure_identification procedure_block ENDPROCEDURE
+        procedure_declaration : procedure_identification new_scope procedure_block ENDPROCEDURE
     '''
+    global symbolTable
+    global levelScope
+    print symbolTable, " ", levelScope
+
+    for i in symbolTable.keys():
+        print "key: ", i
+
+    symbolTable[levelScope][p[1]] = p[2]
     p[0] = Procedure(p[1], p[2])
+    pop_scope()
 
 class Block(Expr):
     def __init__(self,name, value):
@@ -774,10 +762,14 @@ class SetIn(Expr):
 
 def p_block_declaration(p):
     r'''
-        block_declaration : block_identification procedure_block ENDBLOCK
+        block_declaration : block_identification new_scope procedure_block ENDBLOCK
     '''
+    global symbolTable, levelScope
+    symbolTable[levelScope][p[1]] = p[2]
+
     print "BLOCK: " , p[1]
     p[0] = Block(p[1], p[2])
+    pop_scope()
 
 
 class Auxfields(Expr):
@@ -797,8 +789,6 @@ class TypeDefinition(Expr):
     def __repr__(self):
         return u"TypeDefinition Block %s" % str(self.value)
 
-
-
 def p_auxfields_declaration(p):
     r'''
         auxfields_declaration : AUXFIELDS fields_declaration_list
@@ -807,15 +797,12 @@ def p_auxfields_declaration(p):
 
     p[0] = Auxfields(p[2])
 
-
-
 def p_type_declaration(p):
     r'''
                 type_declaration : TYPE type_definition_list
 
     '''
 
-    print p[2]
     p[0] = TypeDefinition(p[2])
 
 
@@ -843,9 +830,6 @@ def p_type_array(p):
         p[0] = int(p[2])
     else:
         p[0] = int(0)
-
-
-
 
 def p_type_denoter(p):
     '''
@@ -1034,11 +1018,27 @@ def p_structured_type(p):
     p[0] = p[1]
 
 
+
+
+class Array(Expr):
+
+    def __init__(self, size, array_t = None):
+            self.type = "Array"
+            self.array_type = array_t
+            self.size = size
+
+    def __repr__(self):
+        return u"Array [%s] of %s"  % (self.array_type, self.size)
+
+
+
+
 def p_array_type(p):
     '''
         array_type : ARRAY LBRACKET index_list RBRACKET OF component_type
     '''
-    p[0] = ('array', p[3])
+
+    p[0] = Array(p[3], TypeDenoter(p[6]))
 
 def p_index_list(p):
     '''
@@ -1075,13 +1075,28 @@ def p_component_type(p):
 
     p[0] = p[1]
 
+
+class Set(Expr):
+
+    def __init__(self, set_t = None,  size = 0):
+            self.type = "Set"
+            self.set_t = set_t
+            self.size = size
+
+    def __repr__(self):
+        return u"Set [%s] of %s"  % (self.set_t, self.size)
+
 def p_set_type(p):
     '''
         set_type : SET OF base_type
                  | SET LBRACKET COUNT RBRACKET OF base_type
 
     '''
-    p[0] = ('set', p[3])
+
+    if len(p) > 4:
+        p[0] = Set(p[6],p[3])
+    else:
+        p[0] = Set(p[3])
 
 def p_base_type(p):
     '''
@@ -1096,23 +1111,36 @@ def p_identifier_list(p):
     '''
 
     items = []
+
     if len(p) > 2:
+
        if p[1] != None and isinstance(p[1], list):
             for i in p[1]:
                 items.append(i)
 
             items.append(Identifier(p[3]))
             p[0] = items
+
        elif p[1] != None:
-            p[0] = [p[1],Identifier(p[3])]
+
+            if isinstance(p[3], list):
+                for x in p[3]:
+                    items.append(x)
+
+                p[0] = items.insert(0,p[1])
+
+            elif p[3] != None:
+                p[0] = [p[1],Identifier(p[3])]
+            else:
+                p[0] = Identifier(p[1])
+
+
        else:
+
             p[0] = Identifier(p[3])
 
     else:
         p[0] = Identifier(p[1])
-
-
-
 
 class TypeLocal(TypeC):
 
@@ -1121,10 +1149,6 @@ class TypeLocal(TypeC):
             self.name =  name
             self.value = value
             self.modifiers = modifiers
-
-
-
-
 
 def p_locals_declaration_list(p):
     r'''
@@ -1153,22 +1177,20 @@ def p_locals_declaration(p):
     '''
         locals_declaration : identifier_list COLON type_denoter
     '''
-
+    global symbolTable, levelScope
     items = []
 
     if p[1] != None and isinstance(p[1],list):
         for i in p[1]:
             items.append(i)
+            symbolTable[levelScope][str(i.name)] = i
 
         p[0] =  TypeLocal( items, TypeDenoter(p[3]) )
 
     else:
+
         p[0] =  TypeLocal( p[1], TypeDenoter(p[3]))
-
-
-
-
-
+        symbolTable[levelScope][str(p[1].name)] = TypeDenoter(p[3])
 
 def p_type_definition_list(p):
     r'''
@@ -1198,7 +1220,6 @@ def p_type_definition_list(p):
             else:
                 p[0] = [p[1],p[2]]
 
-
         else:
             p[0] = p[2]
 
@@ -1216,17 +1237,24 @@ def p_type_definition(p):
 
     '''
 
-
-
+    global symbolTable, levelScope
 
     if len(p) > 6 :
-        p[0] = TypeC(p[1], p[4], p[7])
+        t =  TypeC(p[1], p[4], p[7])
+        p[0] = t
     elif len(p) == 6 and p.slice[5].type == 'RPAREN':
-        p[0] = TypeC(p[1], p[4], None)
+        t = TypeC(p[1], p[4], None)
+        p[0] = t
     elif len(p) == 6 and p.slice[5].type == 'tmodifiers_list':
-        p[0] = TypeC(p[1], p[3], p[5])
+        t = TypeC(p[1], p[3], p[5])
+        p[0] = t
     else:
-        p[0] = TypeC(p[1], p[3])
+        t = TypeC(p[1], p[3])
+        p[0] = t
+
+    symbolTable[levelScope][p[0].name] = t
+
+
 
 
 def p_type_definition_part(p):
@@ -1279,7 +1307,7 @@ def p_rules_part(p):
                    | locals_part
     '''
 
-    print "\tRULES"
+    #print "\tRULES"
     if len(p) > 2:
         p[0] = p[2]
     else:
@@ -1289,26 +1317,30 @@ def p_rules_part(p):
 
 def p_locals_part(p):
     r'''
-        locals_part : LOCALS locals_declaration_list
+        locals_part : LOCALS  new_scope locals_declaration_list
                     | fields_part
 
     '''
-    print "\tLOCALS"
+   # print "\tLOCALS"
+
 
 
     if len(p) > 2:
         p[0] = p[2]
+        pop_scope()
+
     else:
         p[0] = p[1]
 
-    pprint.pprint(p[0])
+
+
 
 def p_fields_part(p):
     r'''
         fields_part : FIELDS fields_declaration_list
                     | auxfields_part
     '''
-    #print "\tFIELDS"
+
 
     if len(p) > 2:
         p[0] = p[2]
@@ -1326,10 +1358,11 @@ def p_auxfields_part(p):
 
     if len(p) > 2:
         p[0] = p[2]
+
     else:
         p[0] = p[1]
 
-    print "\tAUXFIELDS"
+#    print "\tAUXFIELDS"
 
     #print p[0]
 
@@ -1392,8 +1425,6 @@ class ParamModifier(Expr):
         if value == None:
             self.value = "IMPORT"
 
-
-
     def __repr__(self):
         if self.value == None:
             return u"ParamModifier: None"
@@ -1453,7 +1484,7 @@ def p_field_description(p):
 def p_tag_rule(p):
     '''
     tag_rule  : LPAREN LITERAL RPAREN
-              | tempty
+              |
     '''
 
 
@@ -1467,9 +1498,10 @@ def p_tag_rule(p):
 def p_fields_declaration(p):
     '''
     fields_declaration : identifier_list tag_rule enum_languages_list field_description COLON type_denoter
+                       | identifier_list tag_rule enum_languages_list COLON type_denoter
                        | identifier_list field_description COLON type_denoter
                        | identifier_list COLON type_denoter COMMA tmodifiers_list
-                       | identifier_list  COLON type_denoter
+                       | identifier_list COLON type_denoter
                        | IDENTIFIER TAG enum_languages_list field_description COLON type_denoter COMMA tmodifiers_list
                        | IDENTIFIER TAG enum_languages_list field_description COLON type_denoter
 
@@ -1478,35 +1510,49 @@ def p_fields_declaration(p):
 
     items = []
 
+
+
     if p.slice[1].type == "identifier_list":
         #def __init__(self, name, tag, languages, description, typeOf, modifiers = None):
-        if p[1] != None:
-            if isinstance(p[1],list):
-                for i in p[1]:
-                    items.append(i)
 
         if p.slice[2].type == 'COLON' and len(p.slice) > 4:
-            items.append(Field(p[1],None,None,None, p[3],p[4]))
+            f = Field(p[1],None,None,None, p[3],p[4])
+            items.append(f)
         elif p.slice[2].type == 'COLON':
-            items.append(Field(p[1],None,None,None,p[3]))
+            f = Field(p[1],None,None,None,p[3])
+            items.append(f)
         elif p.slice[2].type == 'field_description':
-            items.append(Field(p[1],None,None, p[2],p[4]))
+            f = Field(p[1],None,None, p[2],p[4])
+            items.append(f)
+        elif p.slice[5].type == 'type_denoter':
+            f = Field(p[1],p[2],p[3],None,p[5])
+            items.append(f)
         else:
-            items.append(Field(p[1],p[2],p[3],p[4],p[6]))
+            f = Field(p[1],p[2],p[3],p[4],p[6])
+            items.append(f)
 
         p[0] = items
 
-        for i in items:
-            vars[str(i.name)] = i
+        if p[1] != None:
+
+            if isinstance(p[1],list):
+                for i in p[1]:
+
+                    symbolTable[levelScope][str(i.name)] = f
 
     else:
 
-        if p.slice[1].type == "IDENTIFIER" and len(p) > 6:
-            p[0] = Field(Identifier(p[1]), p[2], p[3], p[4], p[6])
-        elif p.slice[1].type == "IDENTIFIER":
-            p[0] = Field(Identifier(p[1]), p[2], p[3], p[4], p[6])
 
-        vars[str(p[0].name)] = p[0]
+        if p.slice[1].type == "IDENTIFIER" and len(p) > 6:
+            f =   Field(Identifier(p[1]), p[2], p[3], p[4], p[6])
+            p[0] = f
+        elif p.slice[1].type == "IDENTIFIER":
+            f = Field(Identifier(p[1]), p[2], p[3], p[4], p[6])
+            p[0] = f
+
+        symbolTable[levelScope][str(p[0].name)] = f
+
+ #       vars[str(p[0].name)] = p[0]
 
 
 def p_parameters_declaration_part(p):
@@ -1514,7 +1560,7 @@ def p_parameters_declaration_part(p):
         parameters_declaration_part : PARAMETERS parameters_declaration_list
                                     | rules_part
     '''
-    print "\t\tPARAMETERS"
+    #print "\t\tPARAMETERS"
 
 
     if len(p) > 2:
@@ -1579,6 +1625,7 @@ def p_parameter_declaration(p):
 
   #  else:
 #     p[0] =  TypeLocal( p[1], TypeDenoter(p[3]))
+
 
 
     if len(p) > 2 and p.slice[2].type == 'identifier_list':
@@ -1816,7 +1863,9 @@ def p_built_in_functions(p):
                                | LEN
                                | SUBSTRING
                                | RANDOM
+                               | POSITION
                                | YEAR
+                               | VAL
 
 
     '''
@@ -1848,7 +1897,7 @@ def p_primary(p):
     elif p.slice[1].type ==  'LPAREN':
         p[0] = p[2]
     elif p.slice[1].type == 'set_constructor':
-        print "SET: ", p[1]
+       # print "SET: ", p[1]
         p[0] = p[1]
     else:
         p[0] = p[1]
@@ -1888,7 +1937,7 @@ def p_member_designator_list(p):
 
     if len(p) > 2:
         if isinstance(p[1],list):
-            p[0] = [p[1]] + [p[3]]
+            p[0] = p[1] + [p[3]]
         else:
             if p[1]:
                 p[0] = [p[1]] + [p[3]]
@@ -1961,15 +2010,37 @@ def p_index_expression_list(p):
         index_expression_list : index_expression_list COMMA index_expression
                         | index_expression
     '''
+
+
     if len(p) > 2:
-        p[0] = p[1] + [p[3]]
+        if isinstance(p[1],list):
+            p[0] = p[1] + [p[3]]
+        else:
+            p[0] = [p[1]] + [p[3]]
     else:
         p[0] = p[1]
+
+
 
 def p_index_expression(p):
     r'''        index_expression : expression
         '''
     p[0] = p[1]
+
+
+class FieldDesignator(Expr):
+
+
+
+    def __init__(self, value, method):
+        self.type = "Keep"
+        self.value = value
+        self.method = method
+
+    def __repr__(self):
+        return u"%s.%s " % (self.value, self.method)
+
+
 
 def p_field_designator(p):
     r'''
@@ -1979,11 +2050,18 @@ def p_field_designator(p):
 
     '''
 
-    try:
-        p[0] = p[1] + "" + p[2] + "" + p[3]
-        print p[0]
-    except:
-        pass
+    p[0] = FieldDesignator(p[1], p[3])
+class Keep(Expr):
+
+
+
+    def __init__(self, value):
+        self.type = "Keep"
+        self.value = value
+
+    def __repr__(self):
+        return u"Keep %s " % (self.value)
+
 
 
 def p_method_statement(p):
@@ -1991,8 +2069,7 @@ def p_method_statement(p):
             method_statement : variable_access DECIMAL KEEP
     '''
 
-    print "KEEP method"
-    p[0] = "KEEP"
+    p[0] = Keep(p[1])
 
 
 class CallProc(Expr):
@@ -2068,6 +2145,7 @@ def p_statement_list(p):
     r'''statement_list :  statement_list statement
                         | statement
       '''
+    global levelScope
 
     items = []
 
@@ -2090,17 +2168,33 @@ def p_statement_list(p):
         p[0] = p[1]
 
 
-#def p_module_statement(p):
-#    r'''
-#        module_statement : variable_access LBRACKET index_expression_list RBRACKET LPAREN index_expression_list RPAREN
-#    '''
-#
-#    print "MODULE CALL"
+class ModuleCall(Expr):
+
+    def __init__(self, name, index, params = None):
+        self.type = "ModuleCall"
+        self.name = name
+        self.index = index
+        self.params = params
+
+    def __repr__(self):
+        return stdout_encode('<(ModuleCall: {0} Index: {1} Params: {2})>').format(self.name, self.index, self.params)
+
+
+
+def p_module_statement(p):
+    r'''
+        module_statement : variable_access LBRACKET index_expression_list RBRACKET LPAREN index_expression_list RPAREN
+    '''
+
+    p[0] = ModuleCall(p[1],p[3],p[6])
+
+
 
 
 def p_statement(p):
     ''' statement :   assignment_statement
                     | method_statement
+                    | module_statement
                     | procedure_statement
                     | repeat_statement
                     | if_statement
@@ -2109,6 +2203,7 @@ def p_statement(p):
                     | check_statement
                     | signal_statement
                     | not_statement
+                    | layout_statement
 
 
 
@@ -2131,12 +2226,42 @@ def p_while_statement(p):
     '''
 
 
+class ForStatement(Expr):
+
+    def __init__(self, control, initial, direction, final, statements):
+        global levelScope
+        self.type = "FOR"
+        self.control = control
+        self.initial = initial
+        self.direction = direction
+        self.final = final
+        self.value = statements
+
+
+    def __repr__(self):
+        return stdout_encode('FOR: {0} {1} {2} {3} DO {4}').format(self.control, self.initial, self.direction, self.final, self.value)
+
 
 def p_for_statement(p):
     '''
         for_statement : FOR control_variable ASSIGN initial_value direction final_value DO statement_list ENDDO
     '''
-    print "FOR "
+
+    p[0] = ForStatement(p[2],p[4],p[5],p[6],p[8])
+
+
+class InvolvingStatement(Expr):
+    def __init__(self,name, value):
+        self.type = "InvolvingStatement"
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+
+        if self.name != None and self.value != None:
+            return u"INVOLVING STATEMENT %s %s" % (self.name, self.value)
+        else:
+            return "Missing INVOLVING Statement"
 
 def p_involving_vars(p):
     '''
@@ -2145,17 +2270,93 @@ def p_involving_vars(p):
                        | INVOLVING TAG
                        |
 
+
     '''
+
+    if len(p) > 2:
+        if p.slice[2].type == 'LPAREN':
+            p[0] = InvolvingStatement("statement", p[3])
+        elif p.slice[2].type == "params":
+            p[0] = InvolvingStatement("params", p[2])
+        else:
+            p[0] = InvolvingStatement("tag", p[2])
+
+
+
+class CheckStatement(Expr):
+    def __init__(self,left, right = None, literal = None):
+        self.type = "CheckStatement"
+        self.left = left
+        self.right = right
+        self.literal = literal
+
+
+    def __repr__(self):
+        return u"CHECK STATEMENT %s %s %s" % (self.left, self.right, self.literal)
+
+
 
 def p_check_statement(p):
     '''
         check_statement : CHECK boolean_expression involving_vars LITERAL
     '''
 
+    p[0] = CheckStatement(p[2],p[3],p[4])
+
+
+
+
+class LayoutStatement(Expr):
+    def __init__(self,left, right = None, literal = None):
+        self.type = "LayoutStatement"
+        self.left = left
+        self.right = right
+        self.literal = literal
+
+
+    def __repr__(self):
+            return u"LAYOUT STATEMENT %s %s %s" % (self.left, self.right, self.literal)
+
+
+def p_layout_statement(p):
+    r'''
+        layout_statement : LAYOUT FROM IDENTIFIER TO IDENTIFIER FIELDPANE IDENTIFIER
+    '''
+
+    p[0] = LayoutStatement(p[3],p[5], p[7])
+
+class SignalStatement(Expr):
+    def __init__(self,left, right = None, literal = None):
+        self.type = "SignalStatement"
+        self.left = left
+        self.right = right
+        self.literal = literal
+
+
+    def __repr__(self):
+        return u"SIGNAL STATEMENT %s %s %s" % (self.left, self.right, self.literal)
+
+
 def p_signal_statement(p):
     '''
         signal_statement : SIGNAL boolean_expression involving_vars LITERAL
     '''
+
+    p[0] = SignalStatement(p[2], p[3],p[4])
+
+
+
+class NotBinStatement(Expr):
+    def __init__(self,left, right = None, literal = None):
+        self.type = "NotBinStatement"
+        self.left = left
+        self.right = right
+        self.literal = literal
+
+
+    def __repr__(self):
+        return u"NOTBINSTATEMENT %s %s %s" % (self.left, self.right, self.literal)
+
 
 
 def p_not_statement(p):
@@ -2166,14 +2367,18 @@ def p_not_statement(p):
     '''
 
 
+    if len(p) > 4:
+        p[0] = NotBinStatement(p[2], p[3],p[4])
+    else:
+        p[0] = NotBinStatement(p[2], p[3])
 
 
 
 def p_if_statement(p):
     r'''
         if_statement :    IF boolean_expression THEN statement_list else_statement_list ENDIF
-
                         | IF boolean_expression THEN statement_list ENDIF
+
  '''
 
 
@@ -2211,7 +2416,7 @@ def p_assignment_statement(p):
     '''
 
     p[0] = BinOp(p[1], ':=', p[3])
-    vars[str(p[1])] = p[3]
+    #vars[str(p[1])] = p[3]
 
 
 
@@ -2232,9 +2437,6 @@ logging.basicConfig(
 )
 log = logging.getLogger()
 
-
-
-
 parser = yacc.yacc()
 
 
@@ -2243,7 +2445,7 @@ result = parser.parse(s, debug=log)
 
 
 
-pprint.pprint(result,width=120)
+#pprint.pprint(result,width=120)
 #print result
 
 
@@ -2260,3 +2462,4 @@ pprint.pprint(result,width=120)
 #        print e
 
 
+pprint.pprint(symbolTable)
