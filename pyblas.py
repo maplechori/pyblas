@@ -34,7 +34,30 @@ with codecs.open("hrs_c.txt", encoding='iso8859') as fl:
 
 data =  data +  data2 + data3
 
-data = "AUXFIELDS A : STRING[20] BLOCK TACOS PARAMETERS IMPORT T : STRING BLOCK MEXICO RULES A := 1 B := A * A ENDBLOCK FIELDS Hearingaid: BC_Hearingaid RULES  IF 3 > 5 THEN Stupid ENDIF ENDBLOCK"
+data = "AUXFIELDS D : STRING[20]            " \
+       "BLOCK TACOS                         " \
+       "PARAMETERS IMPORT T : STRING        " \
+       "    BLOCK MEXICO                    " \
+       "        LOCALS A, B : INTEGER" \
+       "               C : STRING       " \
+       "        RULES " \
+       "            A := 5" \
+       "            B := A * A  + 3 - 16" \
+       "            C := 'test' + 'world'  " \
+       "" \
+       "        IF A > B THEN" \
+       "            WHASSUP " \
+       "            C := 15     " \
+       "        ELSE" \
+       "            TOMBO" \
+       "        ENDIF               " \
+       "    ENDBLOCK                        " \
+       "                                    " \
+       "FIELDS Hearingaid: BC_Hearingaid    " \
+       "RULES  IF 3 > 5 THEN                " \
+       "    Stupid                          " \
+       "ENDIF                               " \
+       "ENDBLOCK                            "
 
 def new_scope():
     return {}
@@ -73,12 +96,12 @@ def p_new_scope(p):
 
 class UnsignedConstant(Expr):
     def __init__(self, type, value):
-        self.type = "Unsigned Constant"
+        self.type = "LITERAL"
         self.value = value
         self.type = type
 
     def __repr__(self):
-        return stdout_encode('<Unsigned Constant> {0}').format(self.type)
+        return stdout_encode('{0}').format(self.type)
 
 
 
@@ -963,6 +986,19 @@ def p_enumerated_list(p):
 
 
 
+
+
+class Numeric(Expr):
+
+    def __init__(self, value):
+            self.type = "NUMERIC"
+            self.value = value
+
+
+    def __repr__(self):
+        return u"NUMERIC: %d"  % (self.value)
+
+
 def p_numeric_type(p):
     r'''
         numeric_type : FLOAT
@@ -971,9 +1007,9 @@ def p_numeric_type(p):
 
 
     if p[1] == "FLOAT":
-        p[0] = float(p[1])
+        p[0] = Numeric(float(p[1]))
     else:
-        p[0] = int(p[1])
+        p[0] = Numeric(int(p[1]))
 
 def p_subrange_type(p):
     '''
@@ -1892,6 +1928,8 @@ def p_primary(p):
     elif p.slice[1].type == 'set_constructor':
        # print "SET: ", p[1]
         p[0] = p[1]
+    elif p.slice[1].type == "FLOAT" or p.slice[1].type == "COUNT":
+        p[0] = Numeric(p[1])
     else:
         p[0] = p[1]
 
@@ -2455,50 +2493,136 @@ result = parser.parse(s, debug=log)
 #        print e
 
 
-#pprint.pprint(symbolTable)
+pprint.pprint(symbolTable)
 pprint.pprint(result)
 
-def evaluateSubtree(node):
+def getSymbol(symb):
+    global symbolTable
 
+    if isinstance(symb, list):
+        return None
+
+    for i in range(len(symbolTable)-1,0,-1):
+        if symbolTable[i].has_key(symb):
+                return symbolTable[i][symb]
+
+
+    return None
+
+
+vars = {
+        "ActiveLanguage" : 1,
+        "CORENG" : 1,
+        "CORSPN" : 2,
+        "PRXENG" : 3,
+        "PRXSPN" : 4,
+        "EXTENG" : 5,
+        "EXTSPN" : 6,
+        "MEDIA"  : 7
+}
+
+
+def evaluateSubtree(node):
+    global symbolTable, levelScope, vars
+
+    retVal = None
+
+    if not isinstance(node, list) and node.type == "IDENTIFIER":
+        return getSymbol(node)
 
     if isinstance(node,list):
         for i in node:
-            print "c:", i
-            if hasattr(i, "value") and isinstance(i.value,list):
-                for x in i.value:
-                    print "b:", x
-#                    return evaluateSubtree(x)
 
-    else:
-        print "here"
-    #if not isinstance(node, int) and node.type == "BINOP":
-    #    print node.op
-    #    evaluateSubtree(node.left)
-    #    evaluateSubtree(node.right)
+            if hasattr(i, "value"):
+                if isinstance(i.value,list):
+                    print "list->", i.value, i.type
+                    retVal = evaluateSubtree(i.value)
+                else:
+                     print "->", i, i.type
+                     retVal = evaluateSubtree(i)
+            else:
+                print "-->", i, i.type
+                retVal = evaluateSubtree(i)
 
-    #if (hasattr(node,"value")):
-    #    evaluateSubtree(node.value)
-
+    elif node.type == "NUMERIC":
+        return node
 
 
+    if not isinstance(node, list) and node.type == "BINOP":
+
+        nleft = evaluateSubtree(node.left)
+        nright = evaluateSubtree(node.right)
+        print pprint.pprint(vars)
+        print "LEFT: " , pprint.pprint(nleft), dir(nleft), type(nleft), nleft.type
+        print "RIGHT: " , pprint.pprint(nright), dir(nright), type(nright), nright
+
+        if (hasattr(nleft,"name")) and getSymbol(nleft.name) and vars.has_key(nleft.name):
+            left = vars[nleft.name]
+        elif (hasattr(nleft,"type")) and nleft.type == "LITERAL":
+            left = nleft
+        elif isinstance(nleft,int):
+            left = Numeric(nleft)
+        elif nleft.type == "NUMERIC":
+            left = nleft
+        else:
+            left = nleft
+
+        opType = "NUMERIC"
+        if left.type == "NUMERIC":
+            opType = "NUMERIC"
+        else:
+            opType = "LITERAL"
+
+
+        if (hasattr(nright,"name")) and getSymbol(nright.name) and vars.has_key(nright.name):
+            right = vars[nright.name]
+        elif (hasattr(nright,"type")) and nright.type == "LITERAL":
+            right = nright
+        elif isinstance(nright,int):
+            right = Numeric(nright)
+        elif nright.type == "NUMERIC":
+            right = nright
+        else:
+            right = nright
 
 
 
-"""
-       op = x.left.op
 
-                if op == ">":
-                    if x.left.left < x.left.right:
-                        print "woo!"
-                if op == "<":
-                    if x.left.left < x.left.right:
-                        print "moo!"
+        if node.op == ":=":
+            if (getSymbol(nleft.name)):
+                 vars[nleft.name] = nright
 
-                #if x.left x.op x.right
+        elif node.op == "*":
+            return Numeric(left.value * right.value)
+        elif node.op == "+":
 
-"""
+            if opType == "NUMERIC":
+                return Numeric(left.value * right.value)
+            else:
+                return UnsignedConstant("LITERAL", left.value + right.value)
+
+        elif node.op == "-":
+            return Numeric(left.value - right.value)
+        elif node.op == "/":
+            return left.value / right.value
+        elif node.op == "MOD":
+            return Numeric(left.value % right.value)
 
 
-#print result[1]
-evaluateSubtree(result)
 
+    return node
+
+
+
+
+
+
+
+pprint.pprint(result[1].value)
+print evaluateSubtree(result)
+
+
+#print pprint.pprint(symbolTable)
+print pprint.pprint(vars)
+
+print vars["C"].value
