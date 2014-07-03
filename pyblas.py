@@ -45,8 +45,8 @@ data = "AUXFIELDS D : STRING[20]            " \
        "            B := A * A  + 3 - 16" \
        "            C := 'test' + 'world'  " \
        "" \
-       "        IF A > B THEN" \
-       "            WHASSUP " \
+       "        IF A > B OR A < B THEN" \
+       "             " \
        "            C := 15     " \
        "        ELSE" \
        "            TOMBO" \
@@ -54,10 +54,15 @@ data = "AUXFIELDS D : STRING[20]            " \
        "    ENDBLOCK                        " \
        "                                    " \
        "FIELDS Hearingaid: BC_Hearingaid    " \
-       "RULES  IF 3 > 5 THEN                " \
+       "RULES  IF 5 = A THEN                " \
        "    Stupid                          " \
        "ENDIF                               " \
        "ENDBLOCK                            "
+
+
+
+
+print data
 
 def new_scope():
     return {}
@@ -103,12 +108,20 @@ class UnsignedConstant(Expr):
     def __repr__(self):
         return stdout_encode('{0}').format(self.type)
 
+class Boolean(Expr):
+    def __init__(self, value):
+        self.type = "BOOLEAN"
+        self.value = value
+
+
+    def __repr__(self):
+        return stdout_encode('{0}').format(self.type)
 
 
 
 class TypeC(Expr):
     def __init__(self, name, value, modifiers = None):
-        self.type = "Type"
+        self.type = "TYPE"
         self.name =  name
         self.value = value
         self.modifiers = modifiers
@@ -119,20 +132,20 @@ class TypeC(Expr):
 class TypeRange(Expr):
 
   def __init__(self, value, min, max):
-        self.type = "TypeRange"
+        self.type = "RANGE"
         self.value = value
         self.upperlimit = min
         self.lowerlimit = max
 
   def __repr__(self):
 
-        return u"TypeRange %s[%s..%s]" % (str(self.value) , str(self.lowerlimit), str(self.upperlimit))
+        return u"TYPERANGE %s[%s..%s]" % (str(self.value) , str(self.lowerlimit), str(self.upperlimit))
 
 
 class TypeDenoter(Expr):
 
     def __init__(self, value, array=False, size=0):
-        self.type = "TypeDenoter"
+        self.type = "TYPEDENOTER"
         self.value = value
         self.array = array
         self.size = size
@@ -680,7 +693,7 @@ class IfElseStatement(Expr):
 
     def __repr__(self):
 
-        if self.left != None and self.right != None:
+        if self.first != None and self.second != None and self.third != None:
             return u"IF 1:%s THEN 2:%s ELSE 3:%s" % (self.first, self.second, self.third)
         else:
             return "MISSING IF ELSE"
@@ -1108,7 +1121,7 @@ def p_component_type(p):
 class Set(Expr):
 
     def __init__(self, set_t = None,  size = 0):
-            self.type = "Set"
+            self.type = "SET"
             self.set_t = set_t
             self.size = size
 
@@ -1841,9 +1854,6 @@ def p_mult_expression(p):
                             | mult_expression IN unary_expression
                             | unary_expression
     '''
-
-
-
     try:
         if len(p) > 2:
             p[0] = BinOp(p[1],p[2],p[3])
@@ -1859,9 +1869,6 @@ def p_unary_expression(p):
                     unary_expression : sign unary_expression
                                      | exp_expression
     '''
-
-
-
 
     if len(p) > 2:
         p[0] = Unary(p[1], p[2])
@@ -1883,9 +1890,6 @@ def p_exp_expression(p):
     except:
         pass
 
-
-
-
 def p_built_in_functions(p):
     r'''
             built_in_functions : STR
@@ -1899,8 +1903,6 @@ def p_built_in_functions(p):
 
     '''
     p[0] =  p[1]
-
-
 
 def p_primary(p):
     r'''
@@ -1933,8 +1935,6 @@ def p_primary(p):
     else:
         p[0] = p[1]
 
-
-
 def p_unsigned_constant(p):
     r'''
         unsigned_constant : LITERAL
@@ -1952,10 +1952,8 @@ def p_unsigned_constant(p):
 def p_set_constructor(p):
     r'''
         set_constructor : LBRACKET member_designator_list RBRACKET
-
-
     '''
-#                        | LBRACKET RBRACKET
+    # | LBRACKET RBRACKET
 
     p[0] = p[2]
 
@@ -1990,8 +1988,6 @@ def p_member_designator(p):
     else:
         p[0] = p[1]
 
-
-
 class Identifier(Expr):
     def __init__(self, name):
         self.type = "Identifier"
@@ -2015,7 +2011,6 @@ def p_variable_access(p):
         p[0] = p[1]
 
 
-
 class IndexedVariable(Expr):
     def __init__(self, name, index):
         self.type = "INDEXEDVARIABLE"
@@ -2032,8 +2027,6 @@ def p_indexed_variable(p):
         indexed_variable :  variable_access LBRACKET index_expression_list RBRACKET
 
     '''
-
-
     p[0] = IndexedVariable(p[1], p[3])
 
 def p_index_expression_list(p):
@@ -2042,7 +2035,6 @@ def p_index_expression_list(p):
                         | index_expression
     '''
 
-
     if len(p) > 2:
         if isinstance(p[1],list):
             p[0] = p[1] + [p[3]]
@@ -2050,8 +2042,6 @@ def p_index_expression_list(p):
             p[0] = [p[1]] + [p[3]]
     else:
         p[0] = p[1]
-
-
 
 def p_index_expression(p):
     r'''        index_expression : expression
@@ -2121,8 +2111,6 @@ class CallBuildIn(Expr):
     def __repr__(self):
         return stdout_encode('<(Call BuildIn: {0} Params: {1})>').format(self.name, self.params)
 
-
-
 def p_procedure_statement(p):
     r'''
             procedure_statement : IDENTIFIER params
@@ -2137,7 +2125,6 @@ def p_procedure_statement(p):
 def p_params(p):
     r'''
             params : LPAREN actual_parameter_list RPAREN
-
     '''
 
     p[0] = p[2]
@@ -2146,7 +2133,7 @@ def p_params(p):
 def p_actual_parameter_list(p):
     r'''
         actual_parameter_list : actual_parameter_list COMMA actual_parameter
-                            | actual_parameter
+                             | actual_parameter
     '''
 
     if len(p) > 2:
@@ -2160,7 +2147,9 @@ def p_actual_parameter_list(p):
 
 def p_actual_parameter(p):
     r'''
-            actual_parameter :  expression '''
+        actual_parameter :  expression
+    '''
+
     p[0] = p[1]
 
 
@@ -2413,7 +2402,7 @@ def p_if_statement(p):
  '''
 
 
-    if p.slice[5] == 'else_statement_list':
+    if p.slice[5].type == 'else_statement_list':
         p[0] = IfElseStatement(p[2], p[4], p[5])
     else:
         p[0] = IfStatement(p[2], p[4])
@@ -2493,8 +2482,8 @@ result = parser.parse(s, debug=log)
 #        print e
 
 
-pprint.pprint(symbolTable)
-pprint.pprint(result)
+#pprint.pprint(symbolTable)
+#pprint.pprint(result)
 
 def getSymbol(symb):
     global symbolTable
@@ -2546,6 +2535,29 @@ def evaluateSubtree(node):
 
     elif node.type == "NUMERIC":
         return node
+
+
+    if not isinstance(node, list) and node.type == "IF":
+        print "IF", node.left, node.right
+        nleft = evaluateSubtree(node.left)
+
+        print nleft.value
+
+        if nleft.value == True:
+            print "WHY"
+            nright = evaluateSubtree(node.right)
+
+    if not isinstance(node, list) and node.type == "IFELSE":
+        print "IFELSE"
+
+        nleft = evaluateSubtree(node.first)
+
+        if nleft.value:
+            nright = evaluateSubtree(node.second)
+        else:
+            nright = evaluateSubtree(node.third)
+
+
 
 
     if not isinstance(node, list) and node.type == "BINOP":
@@ -2607,6 +2619,32 @@ def evaluateSubtree(node):
             return left.value / right.value
         elif node.op == "MOD":
             return Numeric(left.value % right.value)
+        elif node.op == ">":
+            if left.value>right.value:
+                return Boolean(True)
+            else:
+                return Boolean(False)
+        elif node.op == ">=":
+            if left.value>=right.value:
+                return Boolean(True)
+            else:
+                return Boolean(False)
+        elif node.op == "<":
+            if left.value<right.value:
+                return Boolean(True)
+            else:
+                return Boolean(False)
+        elif node.op == "<=":
+            if left.value<=right.value:
+                return Boolean(True)
+            else:
+                return Boolean(False)
+
+        elif node.op == "=":
+            if left.value==right.value:
+                return Boolean(True)
+            else:
+                return Boolean(False)
 
 
 
@@ -2625,4 +2663,3 @@ print evaluateSubtree(result)
 #print pprint.pprint(symbolTable)
 print pprint.pprint(vars)
 
-print vars["C"].value
