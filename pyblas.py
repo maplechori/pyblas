@@ -38,14 +38,14 @@ data = "AUXFIELDS D : STRING[20]            " \
        "BLOCK TACOS                         " \
        "PARAMETERS IMPORT T : STRING        " \
        "    BLOCK MEXICO                    " \
-       "        LOCALS A, B : INTEGER" \
+       "        LOCALS A, B , K, X: INTEGER" \
        "               C : STRING       " \
        "        RULES " \
        "            A := 5" \
        "            B := A * A  + 3 - 16" \
        "            C := 'test' + 'world'  " \
        "" \
-       "        IF A > B OR A < B THEN" \
+       "        IF A < B AND A < B THEN" \
        "             " \
        "            C := 15     " \
        "        ELSE" \
@@ -54,15 +54,25 @@ data = "AUXFIELDS D : STRING[20]            " \
        "    ENDBLOCK                        " \
        "                                    " \
        "FIELDS Hearingaid: BC_Hearingaid    " \
-       "RULES  IF 5 = A THEN                " \
-       "    Stupid                          " \
-       "ENDIF                               " \
+       "RULES  IF A = 5 THEN                " \
+       "    STUPID " \
+       "    " \
+       "     " \
+       "    X := 0 " \
+       "    FOR K := 1 TO 10 DO " \
+       "       " \
+       "     X := X + 1 " \
+       "       C := 'hi' + 'there'    " \
+       "       X:= 2     " \
+       "    ENDDO " \
+       "         " \
+       "    ENDIF                               " \
        "ENDBLOCK                            "
 
 
+#data = data2
 
-
-print data
+#print data2
 
 def new_scope():
     return {}
@@ -99,11 +109,10 @@ def p_new_scope(p):
     push_scope(scope)
 
 
-class UnsignedConstant(Expr):
-    def __init__(self, type, value):
-        self.type = "LITERAL"
+class String(str):
+    def __init__(self, value):
+        self.type = "STRING"
         self.value = value
-        self.type = type
 
     def __repr__(self):
         return stdout_encode('{0}').format(self.type)
@@ -115,7 +124,7 @@ class Boolean(Expr):
 
 
     def __repr__(self):
-        return stdout_encode('{0}').format(self.type)
+        return stdout_encode('{0} [{1}]').format(self.type, self.value)
 
 
 
@@ -577,6 +586,7 @@ lexer.input(data)
 
 
 precedence = (
+    ('left', 'ASSIGN'),
     ('left', 'PLUS', 'MINUS'),
     ('left', 'MULT', 'DIVIDE', 'MOD'),
 )
@@ -678,7 +688,7 @@ class IfStatement(Expr):
     def __repr__(self):
 
         if self.left != None and self.right != None:
-            return u"IF %s THEN %s" % (self.left, self.right)
+            return u"IF \t%s THEN \t%s" % (self.left, self.right)
         else:
             return "Missing IF"
 
@@ -722,7 +732,7 @@ class Unary(Expr):
 
     def __repr__(self):
 
-        if self.left and self.right:
+        if self.op and self.value:
             return u"%s %s" % (self.op, self.value)
         else:
             return "None"
@@ -876,12 +886,6 @@ def p_type_denoter(p):
     else:
         p[0] = TypeDenoter(p[1])
 
-        if p.slice[1].type == "IDENTIFIER":
-            #print "This needs to look at the symbol table"
-            pass
-
-
-
 
 def p_new_type(p):
     '''
@@ -1000,16 +1004,27 @@ def p_enumerated_list(p):
 
 
 
-
-class Numeric(Expr):
+class Integer(int):
 
     def __init__(self, value):
-            self.type = "NUMERIC"
-            self.value = value
-
+        self.type = "INTEGER"
+        self.value = value
 
     def __repr__(self):
-        return u"NUMERIC: %d"  % (self.value)
+        return u"%d"  % (self.value)
+
+
+
+class Real(float):
+
+    def __init__(self, value):
+        self.type = "REAL"
+        self.value = value
+
+    def __repr__(self):
+        return u"REAL %d"  % (self.value)
+
+
 
 
 def p_numeric_type(p):
@@ -1020,9 +1035,9 @@ def p_numeric_type(p):
 
 
     if p[1] == "FLOAT":
-        p[0] = Numeric(float(p[1]))
+        p[0] = Real(float(p[1]))
     else:
-        p[0] = Numeric(int(p[1]))
+        p[0] = Integer(int(p[1]))
 
 def p_subrange_type(p):
     '''
@@ -1225,14 +1240,14 @@ def p_locals_declaration(p):
     if p[1] != None and isinstance(p[1],list):
         for i in p[1]:
             items.append(i)
-            symbolTable[levelScope][str(i.name)] = TypeLocal(i.name,TypeDenoter(p[3]) )
+            symbolTable[levelScope][str(i.name)] = TypeLocal(i.name,p[3] )
 
-        p[0] =  TypeLocal( items, TypeDenoter(p[3]) )
+        p[0] =  TypeLocal( items, p[3] )
 
     else:
 
-        p[0] =  TypeLocal( p[1], TypeDenoter(p[3]))
-        symbolTable[levelScope][str(p[1].name)] = TypeDenoter(p[3])
+        p[0] =  TypeLocal( p[1],p[3] )
+        symbolTable[levelScope][str(p[1].name)] = p[3]
 
 def p_type_definition_list(p):
     r'''
@@ -1930,8 +1945,10 @@ def p_primary(p):
     elif p.slice[1].type == 'set_constructor':
        # print "SET: ", p[1]
         p[0] = p[1]
-    elif p.slice[1].type == "FLOAT" or p.slice[1].type == "COUNT":
-        p[0] = Numeric(p[1])
+    elif p.slice[1].type == "FLOAT":
+        p[0] = Real(p[1])
+    elif p.slice[1].type == "COUNT":
+        p[0] = Integer(p[1])
     else:
         p[0] = p[1]
 
@@ -1944,9 +1961,9 @@ def p_unsigned_constant(p):
     '''
 
     if p.slice[1].type == "RF" or p.slice[1].type == "EMPTY" or p.slice[1].type == "DK":
-        p[0] = UnsignedConstant(p[1], p[1])
+        p[0] = String(p[1], p[1])
     else:
-        p[0] = UnsignedConstant("LITERAL", p[1])
+        p[0] = String(p[1])
 
 
 def p_set_constructor(p):
@@ -1989,13 +2006,14 @@ def p_member_designator(p):
         p[0] = p[1]
 
 class Identifier(Expr):
-    def __init__(self, name):
-        self.type = "Identifier"
+    def __init__(self, name, value = None):
+        self.type = "IDENTIFIER"
         self.name = name
+        self.value = value
 
 
     def __repr__(self):
-        return stdout_encode('{0}').format(self.name)
+        return stdout_encode('ID:{0}:{1}').format(self.name, self.value)
 
 
 def p_variable_access(p):
@@ -2487,6 +2505,7 @@ result = parser.parse(s, debug=log)
 
 def getSymbol(symb):
     global symbolTable
+    print "Looking for symbol", symb
 
     if isinstance(symb, list):
         return None
@@ -2500,15 +2519,15 @@ def getSymbol(symb):
 
 
 vars = {
-        "ActiveLanguage" : 1,
-        "CORENG" : 1,
-        "CORSPN" : 2,
-        "PRXENG" : 3,
-        "PRXSPN" : 4,
-        "EXTENG" : 5,
-        "EXTSPN" : 6,
-        "MEDIA"  : 7
-}
+        "ActiveLanguage" : { 'type' : "INTEGER", 'value' : 1} ,
+                "CORENG" : { 'type' : "INTEGER", 'value' : 1},
+                "CORSPN" : { 'type' : "INTEGER", 'value' : 2},
+                "PRXENG" : { 'type' : "INTEGER", 'value' : 3},
+                "PRXSPN" : { 'type' : "INTEGER", 'value' : 4},
+                "EXTENG" : { 'type' : "INTEGER", 'value' : 5},
+                "EXTSPN" : { 'type' : "INTEGER", 'value' : 6},
+                 "MEDIA" : { 'type' : "INTEGER", 'value' : 7}
+        }
 
 
 def evaluateSubtree(node):
@@ -2516,136 +2535,196 @@ def evaluateSubtree(node):
 
     retVal = None
 
-    if not isinstance(node, list) and node.type == "IDENTIFIER":
-        return getSymbol(node)
 
     if isinstance(node,list):
         for i in node:
 
-            if hasattr(i, "value"):
+            if hasattr(i, "value") and i.type != "FOR":
                 if isinstance(i.value,list):
-                    print "list->", i.value, i.type
-                    retVal = evaluateSubtree(i.value)
+                    print "list[", i, "]->", i.value, i.type
+                    evaluateSubtree(i.value)
                 else:
-                     print "->", i, i.type
-                     retVal = evaluateSubtree(i)
+                     print "HAS[",i,"]->", i, i.type
+                     evaluateSubtree(i)
             else:
-                print "-->", i, i.type
+                print "NO[",i,"]-->", i,  i.type
                 retVal = evaluateSubtree(i)
 
-    elif node.type == "NUMERIC":
-        return node
+    elif not isinstance(node, list) and node.type == "STRING":
+        return { 'type' : node.type, 'value' : node.value }
+
+    elif not isinstance(node, list) and node.type == "INTEGER":
+
+        return { 'type' : node.type, 'value' : node.value }
+
+    elif not isinstance(node, list) and node.type == "IDENTIFIER":
+        print node
+        s = getSymbol(node.name)
+        print "It is an identifier!", s
+        if not vars.has_key(node.name):
+            print "setting variable", s
+
+            if (s.type == "TYPEDENOTER"):
+                t = s.value
+            elif (s.value.type == "TYPEDENOTER"):
+                t = s.value.value
+
+            vars[node.name] = { 'name' : node.name, 'value': None, 'type': t}
+
+        return vars[node.name]
+
+
+
+    if not isinstance(node, list):
+        print "PASSED: " , node, " TYPE: ", node.type
+
+    if not isinstance(node, list) and node.type == "FOR":
+           print "FOR LOOP"
+           control = evaluateSubtree(node.control)
+
+           direction = 1
+
+           if node.direction == "DOWNTO":
+               direction = -1
+
+           initial = evaluateSubtree(node.initial)
+           final = evaluateSubtree(node.final)
+
+           for i in range(initial['value'],final['value'], direction):
+               vars[control['name']] = i
+               print "LOOP, ", i, node.value, node.control
+               pprint.pprint(node.value)
+               evaluateSubtree(node.value)
+
 
 
     if not isinstance(node, list) and node.type == "IF":
         print "IF", node.left, node.right
         nleft = evaluateSubtree(node.left)
 
-        print nleft.value
+        print nleft['value']
 
-        if nleft.value == True:
-            print "WHY"
+        if nleft['value'] == 1:
             nright = evaluateSubtree(node.right)
 
     if not isinstance(node, list) and node.type == "IFELSE":
         print "IFELSE"
-
         nleft = evaluateSubtree(node.first)
 
-        if nleft.value:
+        if nleft['value']:
             nright = evaluateSubtree(node.second)
         else:
             nright = evaluateSubtree(node.third)
-
-
-
 
     if not isinstance(node, list) and node.type == "BINOP":
 
         nleft = evaluateSubtree(node.left)
         nright = evaluateSubtree(node.right)
-        print pprint.pprint(vars)
-        print "LEFT: " , pprint.pprint(nleft), dir(nleft), type(nleft), nleft.type
-        print "RIGHT: " , pprint.pprint(nright), dir(nright), type(nright), nright
+        pprint.pprint(vars)
 
-        if (hasattr(nleft,"name")) and getSymbol(nleft.name) and vars.has_key(nleft.name):
-            left = vars[nleft.name]
-        elif (hasattr(nleft,"type")) and nleft.type == "LITERAL":
-            left = nleft
-        elif isinstance(nleft,int):
-            left = Numeric(nleft)
-        elif nleft.type == "NUMERIC":
-            left = nleft
-        else:
-            left = nleft
+        #if (hasattr(nleft,"name")) and getSymbol(nleft.name) and vars.has_key(nleft.name):
+        #    left = vars[nleft.name] #broken
+        #elif (hasattr(nleft,"type")) and nleft.type == "LITERAL":
+        #    left = nleft
+        #elif (hasattr(nleft,"type")) and nleft.type == "IDENTIFIER":
+        #    left =  nleft
+        #else:
+        left = nleft
 
-        opType = "NUMERIC"
-        if left.type == "NUMERIC":
-            opType = "NUMERIC"
-        else:
-            opType = "LITERAL"
-
-
-        if (hasattr(nright,"name")) and getSymbol(nright.name) and vars.has_key(nright.name):
-            right = vars[nright.name]
-        elif (hasattr(nright,"type")) and nright.type == "LITERAL":
-            right = nright
-        elif isinstance(nright,int):
-            right = Numeric(nright)
-        elif nright.type == "NUMERIC":
-            right = nright
-        else:
-            right = nright
-
-
-
+        #if (hasattr(nright,"name")) and getSymbol(nright.name) and vars.has_key(nright.name):
+        #    right = vars[nright.name] # broken
+        #elif (hasattr(nright,"type")) and nright.type == "LITERAL":
+        #    right = nright
+        #elif (hasattr(nright,"type")) and nright.type == "IDENTIFIER":
+        #    right =  nright
+        #else:
+        right = nright
 
         if node.op == ":=":
-            if (getSymbol(nleft.name)):
-                 vars[nleft.name] = nright
+            print "TRYING ASSIGN ON ", left
+
+
+            if (getSymbol(left['name'])):
+                 print "Symbol: ", getSymbol(left['name'])
+
+                 s = getSymbol(left['name'])
+                 #pprint.pprint(s.value.value.value)
+                 if hasattr(right, 'type'):
+                     print "Right type:", right.type
+                 print "Right is: ", right
+                 print "The right value is: ", right['value']
+                 vars[left['name']]['value'] = right['value']
+                 print pprint.pprint(vars)
 
         elif node.op == "*":
-            return Numeric(left.value * right.value)
+            print left
+            print right
+            if left['type'] == "INTEGER" and right['type'] == "INTEGER":
+                return  { "type" : 'INTEGER' , 'value' : int(left['value']) * int(right['value']) }
+
+            if left['type'] == "REAL" and right['type'] == "REAL":
+                return { 'type' : 'REAL', 'value' : float(left['value']) * float(right['value']) }
+
+
         elif node.op == "+":
 
-            if opType == "NUMERIC":
-                return Numeric(left.value * right.value)
+            if left['type'] == "INTEGER" and right['type'] == "INTEGER":
+                return { "type" : 'INTEGER' , 'value' : int(left['value']) + int(right['value']) }
             else:
-                return UnsignedConstant("LITERAL", left.value + right.value)
+                return { "type" : "STRING" , 'value' : str(left['value']) + str(right['value']) }
 
         elif node.op == "-":
-            return Numeric(left.value - right.value)
+            if left['type'] == "INTEGER" and right['type'] == "INTEGER":
+               return  { "type" : 'INTEGER' , 'value' : int(left['value']) - int(right['value']) }
         elif node.op == "/":
-            return left.value / right.value
+             if left['type'] == "INTEGER" and right['type'] == "INTEGER":
+               return  { "type" : 'INTEGER' , 'value' : int(left['value']) / int(right['value']) }
         elif node.op == "MOD":
-            return Numeric(left.value % right.value)
+            return { "type" : 'INTEGER' , 'value' : int(left['value']) % int(right['value']) }
         elif node.op == ">":
-            if left.value>right.value:
-                return Boolean(True)
+            if left['value'] > right['value']:
+                return { "type" : 'INTEGER' , 'value' : 1 }
             else:
-                return Boolean(False)
+                return { "type" : 'INTEGER' , 'value' : 0 }
         elif node.op == ">=":
-            if left.value>=right.value:
-                return Boolean(True)
+            if left['value'] >= right['value']:
+                return { "type" : 'INTEGER' , 'value' : 1 }
             else:
-                return Boolean(False)
+                return { "type" : 'INTEGER' , 'value' : 0 }
         elif node.op == "<":
-            if left.value<right.value:
-                return Boolean(True)
+            if left['value'] < right['value']:
+                return { "type" : 'INTEGER' , 'value' : 1 }
             else:
-                return Boolean(False)
+                return { "type" : 'INTEGER' , 'value' : 0 }
         elif node.op == "<=":
-            if left.value<=right.value:
-                return Boolean(True)
+            if left['value'] <= right['value']:
+                return { "type" : 'INTEGER' , 'value' : 1 }
             else:
-                return Boolean(False)
+                return { "type" : 'INTEGER' , 'value' : 0 }
 
         elif node.op == "=":
-            if left.value==right.value:
-                return Boolean(True)
+            if left['value'] == right['value']:
+                return { "type" : 'INTEGER' , 'value' : 1 }
             else:
-                return Boolean(False)
+                return { "type" : 'INTEGER' , 'value' : 0 }
 
+        elif node.op == "<>":
+            if left['value'] != right['value']:
+                return { "type" : 'INTEGER' , 'value' : 1 }
+            else:
+                return { "type" : 'INTEGER' , 'value' : 0 }
+
+        elif node.op == "AND":
+            if left['value'] and right['value']:
+                return { "type" : 'INTEGER' , 'value' : 1 }
+            else:
+                return { "type" : 'INTEGER' , 'value' : 0 }
+
+        elif node.op == "OR":
+            if left['value'] or right['value']:
+                return { "type" : 'INTEGER' , 'value' : 1 }
+            else:
+                return { "type" : 'INTEGER' , 'value' : 0 }
 
 
     return node
@@ -2656,10 +2735,12 @@ def evaluateSubtree(node):
 
 
 
+
+#print pprint.pprint(symbolTable)
 pprint.pprint(result[1].value)
 print evaluateSubtree(result)
 
 
-#print pprint.pprint(symbolTable)
+
 print pprint.pprint(vars)
 
