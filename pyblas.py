@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-# coding: latin-1
-
+# -*- coding: utf-8 -*-
 __author__ = 'adrianmo'
 
 import ply.lex as lex
@@ -13,61 +12,90 @@ import logging
 
 
 
-sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
+sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
-def stdout_encode(u, default='iso8859'):
-    if sys.stdout.encoding:
-        return u.encode(sys.stdout.encoding)
-    return u.encode(default)
+def stdout_encode(u, default='utf8'):
+        return u
 
 data = None
 
-with codecs.open("hrs_typ.txt", encoding='iso8859') as fl:
+with codecs.open("hrs_typ.txt", encoding='utf8') as fl:
         data=fl.read()
 
-with codecs.open("proc.txt", encoding='iso8859') as fl:
+with codecs.open("proc2.txt", encoding='utf8') as fl:
         data2=fl.read()
 
-with codecs.open("hrs_c.txt", encoding='iso8859') as fl:
+with codecs.open("hrs2_c.txt", encoding='utf8') as fl:
         data3=fl.read()
 
 
-data =  data +  data2 + data3
+data = data + data2 + data3
 
-data = "AUXFIELDS D : STRING[20]            " \
-       "BLOCK TACOS                         " \
-       "PARAMETERS IMPORT T : STRING        " \
-       "    BLOCK MEXICO                    " \
-       "        LOCALS A, B , K, X: INTEGER" \
-       "               C : STRING       " \
-       "        RULES " \
-       "            A := 5" \
-       "            B := A * A  + 3 - 16" \
-       "            C := 'test' + 'world'  " \
-       "" \
-       "        IF A < B AND A < B THEN" \
-       "             " \
-       "            C := 15     " \
-       "        ELSE" \
-       "            TOMBO" \
-       "        ENDIF               " \
-       "    ENDBLOCK                        " \
-       "                                    " \
-       "FIELDS Hearingaid: BC_Hearingaid    " \
-       "RULES  IF A = 5 THEN                " \
-       "    STUPID " \
-       "    " \
-       "     " \
-       "    X := 0 " \
-       "    FOR K := 1 TO 10 DO " \
-       "       " \
-       "     X := X + 1 " \
-       "       C := 'hi' + 'there'    " \
-       "       X:= 2     " \
-       "    ENDDO " \
-       "         " \
-       "    ENDIF                               " \
-       "ENDBLOCK                            "
+data5 = """ AUXFIELDS D : STRING[20]
+       BLOCK TACOS
+       PARAMETERS IMPORT T : STRING
+           BLOCK MEXICO
+               LOCALS A, B , K, X: INTEGER
+                      C : STRING
+               RULES
+                   A := 5
+                   B := A * A  + 3 - 16
+                   C := 'test' + 'world'
+
+               IF A < B AND A < B THEN
+
+                   C := 15
+                ELSE
+                    TOMBO
+                ENDIF
+            ENDBLOCK
+               FIELDS
+           C005_ (C005_)
+                 "
+                      ^FLC005 ^FLC005b ^FLIwer
+                      Def: (Medical doctors include specialists such as Dermatologists,
+                      Psychiatrists, Ophthalmologists, Osteopaths, Cardiologists,
+                      as well as family doctors, internists and physicians' assistants.
+                      Also include diagnoses made by Nurses and Nurse Practitioners.)"
+
+                 "
+                      ^FLC005 ^FLC005b ^FLIwer
+                      Def: (Medicos incluyen especialistas como dermatologos,
+                      psiquiatras, oftalmologos, osteopatas, cardiologos,
+                      al igual que medicos de familia, internistas y asistentes medicos (physicians' assistants).
+                      Tambien incluya los diagnosticos de enfermeras o enfermeras internistas (nurse practitioners).)"
+
+                 "
+                      ^FLC005 ^FLC005b ^FLIwer
+                      Def: (Medical doctors include specialists such as Dermatologists,
+                      Psychiatrists, Ophthalmologists, Osteopaths, Cardiologists,
+                      as well as family doctors, internists and physicians' assistants.
+                      Also include diagnoses made by Nurses and Nurse Practitioners.)"
+
+                 "
+                ^FLC005 ^FLC005b ^FLIwer
+                Def: (Medicos incluyen especialistas como dermatologos, psiquiatras, oftalmologos, osteopatas, cardiologos,
+                al igual que medicos de familia, internistas y asistentes medicos (physicians' assistants).
+                Tambien incluya los diagnosticos de enfermeras o enfermeras internistas (nurse practitioners).)"
+
+                 "[THIS QUESTION DOES NOT EXIST IN THE EXIT PORTION OF HRS]"
+
+                 "[THIS QUESTION DOES NOT EXIST IN THE EXIT PORTION OF HRS]"
+
+                    /"HIGH BLOOD PRESSURE"
+                    : TDispute2
+        RULES
+            IF A = 5 THEN
+                    STUPID
+                X := 0
+           FOR K := 1 TO 10 DO
+
+            X := X + 1
+              C := 'hi' + 'there'
+              X:= 2
+           ENDDO
+           ENDIF
+       ENDBLOCK                            """
 
 
 #data = data2
@@ -79,6 +107,8 @@ def new_scope():
 
 levelScope = 0
 symbolTable = {0 : new_scope()}
+procedureTable = {}
+blockTable = {}
 
 def push_scope(scope):
     global levelScope, symbolTable
@@ -109,13 +139,13 @@ def p_new_scope(p):
     push_scope(scope)
 
 
-class String(str):
+class String(unicode):
     def __init__(self, value):
         self.type = "STRING"
         self.value = value
 
     def __repr__(self):
-        return stdout_encode('{0}').format(self.type)
+        return ("%s %s" % (self.type, self.value)).encode('utf8')
 
 class Boolean(Expr):
     def __init__(self, value):
@@ -131,12 +161,12 @@ class Boolean(Expr):
 class TypeC(Expr):
     def __init__(self, name, value, modifiers = None):
         self.type = "TYPE"
-        self.name =  name
+        self.name =  name.upper()
         self.value = value
         self.modifiers = modifiers
 
     def __repr__(self):
-        return u"%s: %s Value: %s  - Modifiers [%s]" % (self.type, self.name, self.value, self.modifiers)
+        return "%s: %s Value: %s  - Modifiers [%s]" % (self.type, self.name, self.value, self.modifiers)
 
 class TypeRange(Expr):
 
@@ -148,13 +178,18 @@ class TypeRange(Expr):
 
   def __repr__(self):
 
-        return u"TYPERANGE %s[%s..%s]" % (str(self.value) , str(self.lowerlimit), str(self.upperlimit))
+        return "TYPERANGE %s[%s..%s]" % (str(self.value) , str(self.lowerlimit), str(self.upperlimit))
 
 
 class TypeDenoter(Expr):
 
     def __init__(self, value, array=False, size=0):
         self.type = "TYPEDENOTER"
+
+        if isinstance(value, unicode):
+            value = value.upper()
+            #print "UPPERCASE:" , value
+
         self.value = value
         self.array = array
         self.size = size
@@ -163,24 +198,26 @@ class TypeDenoter(Expr):
     def __repr__(self):
 
         if self.array and self.size > 0:
-            return u"TypeDenoter %s[%d]" % (str(self.value) , self.size)
+            return "TYPEDENOTER %s[%d]" % (str(self.value) , self.size)
         elif self.array:
-            return u"TypeDenoter %s[]" % (str(self.value))
+            return "TYPEDENOTER %s[]" % (str(self.value))
         else:
-            return u"TypeDenoter %s" % str(self.value)
+            return "TYPEDENOTER %s" % str(self.value)
 
 
 
 
 class Parameter(Expr):
     def __init__(self, name, typepar, modifiers):
-        self.type = typepar
+        self.type = "PARAMETER"
         self.name =  name
         self.modifiers = modifiers
+        self.value = typepar
+
 
 
     def __repr__(self):
-        return u"Parameter: %s Modifiers: %s  - Type [%s]" % (self.name, self.modifiers, self.type)
+        return "Parameter: %s Modifiers: %s  - Type [%s]" % (self.name, self.modifiers, self.value)
 
 
 
@@ -191,6 +228,7 @@ states = (
   ('fillcode', 'exclusive'))
 
 tokens = [
+    "IN",
     "RULES",
     "ENDBLOCK",
     "TRANSIENT",
@@ -228,6 +266,8 @@ tokens = [
     "DIFF",
     "TYPE",
     "YEAR",
+    "INTEGER",
+    "STRING"
 
 
 ]
@@ -255,8 +295,6 @@ reserved = {
 'ASK' : 'ASK',
 'EMPTY' : 'EMPTY',
 'NOEMPTY' : 'NOEMPTY',
-'STRING' : 'STRING',
-'INTEGER' : 'INTEGER',
 'NORF' : 'NORF',
 'NODK' : 'NODK',
 'DK' : 'DK',
@@ -264,7 +302,7 @@ reserved = {
 'ARRAY' : 'ARRAY',
 'OF' : 'OF',
 'RF' :'RF',
-'IN' : 'IN',
+
 'LOCALS' : 'LOCALS',
 'FIELDS' : 'FIELDS',
 'REPEAT' : 'REPEAT',
@@ -332,6 +370,10 @@ t_ccode_ignore = ' \t'
 
 def t_ccode_error(t):
     t.lexer.skip(1)
+
+def t_IN(t):
+    r'[Ii][Nn]\s'
+    return t
 
 def t_TYPE(t):
     r'[Tt][Yy][Pp][Ee]\s'
@@ -429,7 +471,7 @@ def t_fillcode_error(t):
 
 
 def t_TAG(t):
-    u"\([A-Z][0-9]+[\.\d_A-Z]+\)"
+    "\([A-Z][0-9]+[\.\d_A-Z]+\)"
     #print t.value
     return t
 
@@ -466,6 +508,13 @@ def t_COUNT(t):
     t.value = int(t.value)
     return t
 
+def t_STRING(t):
+    r'[Ss][Tt][Rr][Ii][Nn][Gg]'
+    return t
+
+def t_INTEGER(t):
+    r'[Ii][Nn][Tt][Ee][Gg][Ee][Rr]'
+    return t
 
 def t_PIPE(t):
     r'\|'
@@ -553,17 +602,17 @@ def t_LESSTHAN(t):
 #    return t
 
 def t_IDENTIFIER(t):
-    ur"[\^a-zA-Z_\xF3][a-zA-Zñáéíóúü0-9_\xF3]*"
+    r"[\^a-zA-Z_\xF3][a-zA-ZÃ±Ã¡Ã©Ã­Ã³ÃºÃ¼0-9_\xF3]*"
     t.type = reserved.get(string.upper(t.value), 'IDENTIFIER')
     #print t
     return t
 
 def t_LPAREN(t):
-    u"\("
+    "\("
     return t
 
 def t_RPAREN(t):
-    u"\)"
+    "\)"
     return t
 
 def t_error(t):
@@ -574,21 +623,22 @@ lexer = lex.lex(reflags=(re.UNICODE))
 lexer.input(data)
 
 #for tok in iter(lexer.token, None):
-    #print tok.type,
+ #   print tok.type
 
     #if type(tok.value) == type(u's'):
        #pass
     #    print tok.value
     #else:
         #pass
-    #    print repr(tok.value)
- #   print tok
+  #  print repr(tok.value)
+#    print tok
 
 
 precedence = (
     ('left', 'ASSIGN'),
     ('left', 'PLUS', 'MINUS'),
     ('left', 'MULT', 'DIVIDE', 'MOD'),
+    ('right', 'sign')
 )
 
 start = 'codeblock'
@@ -660,7 +710,7 @@ class Field(Expr):
         self.modifiers = modifiers
 
     def __repr__(self):
-        return u"Field: %s Type: %s  Tag: %s " % (self.name, self.typeOf, self.tag)
+        return ("Field: %s Type: %s  Tag: %s " % (self.name, self.typeOf, self.tag)).encode('ascii','ignore')
 
 
 class BinOp(Expr):
@@ -673,7 +723,9 @@ class BinOp(Expr):
     def __repr__(self):
 
         if self.left != None and self.right != None:
-            return u"L:%s %s R:%s" % (self.left, self.op,  self.right)
+            return ("L:%s OP[%s] R:%s" % (self.left, self.op,  self.right)).encode('ascii','ignore')
+
+
         else:
             return "MISSING BINOP %s" % ( self.op )
 
@@ -688,25 +740,31 @@ class IfStatement(Expr):
     def __repr__(self):
 
         if self.left != None and self.right != None:
-            return u"IF \t%s THEN \t%s" % (self.left, self.right)
+            return ("IF %s THEN %s" % (self.left, self.right)).encode('ascii','ignore')
         else:
             return "Missing IF"
 
 
 class IfElseStatement(Expr):
-    def __init__(self,first, second, third):
+    def __init__(self,first, second, third = None, fourth = None):
         self.type = "IFELSE"
         self.first = first
         self.second = second
         self.third = third
-
+        self.fourth = fourth
 
     def __repr__(self):
+            return ("IF 1:[%s] THEN 2:[%s] ELSEIF 3:[%s] ELSE 4:[%s]" % (self.first, self.second, self.third, self.fourth)).encode('ascii','ignore')
 
-        if self.first != None and self.second != None and self.third != None:
-            return u"IF 1:%s THEN 2:%s ELSE 3:%s" % (self.first, self.second, self.third)
-        else:
-            return "MISSING IF ELSE"
+class ElseIfStatement(Expr):
+    def __init__(self,first, second, third = None):
+        self.type = "ELSEIF"
+        self.first = first
+        self.second = second
+        self.third = third
+
+    def __repr__(self):
+            return ("ELSEIF 1:[%s] THEN 2:[%s] ELSEIF 3:[%s]" % (self.first, self.second, self.third)).encode('ascii','ignore')
 
 
 class ElseStatement(Expr):
@@ -718,7 +776,7 @@ class ElseStatement(Expr):
     def __repr__(self):
 
         if self.first != None:
-            return u"ELSE 1:%s" % (self.first)
+           return ("ELSE 1: %s" % (self.first)).encode('ascii','ignore')
         else:
             return "MISSING ELSE"
 
@@ -733,7 +791,7 @@ class Unary(Expr):
     def __repr__(self):
 
         if self.op and self.value:
-            return u"%s %s" % (self.op, self.value)
+            return "%s %s" % (self.op, self.value).encode('ascii','ignore')
         else:
             return "None"
 
@@ -745,7 +803,7 @@ class Not(Expr):
     def __repr__(self):
 
         if self.value:
-            return u"NOT %s" % (self.value)
+            return "NOT %s" % (self.value)
         else:
             return "None"
 
@@ -757,7 +815,7 @@ class Procedure(Expr):
         self.value = value
 
     def __repr__(self):
-        return u"Procedure %s" % self.name
+        return "Procedure %s" % self.name
 
 
 
@@ -765,12 +823,30 @@ def p_procedure_declaration(p):
     r'''
         procedure_declaration : procedure_identification new_scope procedure_block ENDPROCEDURE
     '''
-    global symbolTable
+    global symbolTable, procedureTable
     global levelScope
 
+    items = []
+    symbolTable[levelScope][p[1].upper()] = {}
+    for i in p[3]:
+        if hasattr(i, 'type') and (i.type == "TYPEDENOTER" or i.type == "TYPE" or i.type == "TYPELOCAL" or i.type == "FIELD" or i.type == "PARAMETER"):
+                items.append(i)
 
-    symbolTable[levelScope][p[1]] = p[3]
-    p[0] = Procedure(p[1], p[3])
+                if isinstance(i.name,list):
+                    for j in i.name:
+                            x = i
+                            x.name = j.name
+                            symbolTable[levelScope][p[1].upper()][j.name] = x
+                else:
+                    if i.type == "FIELD" or i.type == "PARAMETER":
+                        symbolTable[levelScope][p[1].upper()][i.name.name] = i
+                    else:
+                        symbolTable[levelScope][p[1].upper()][i.name] = i
+
+    procedureTable[p[1].upper()] = p[3]
+
+    p[0] = Procedure(p[1].upper(), p[3])
+
     pop_scope()
 
 class Block(Expr):
@@ -780,7 +856,7 @@ class Block(Expr):
         self.value = value
 
     def __repr__(self):
-        return u"Block %s %s" % (self.name, self.value)
+        return "Block %s %s" % (self.name, self.value)
 
 
 class SetIn(Expr):
@@ -789,17 +865,36 @@ class SetIn(Expr):
         self.value = value
 
     def __repr__(self):
-        return u"Set: %s" % (self.value)
+        return "Set: %s" % (self.value)
 
 def p_block_declaration(p):
     r'''
         block_declaration : block_identification new_scope procedure_block ENDBLOCK
     '''
     global symbolTable, levelScope
-    symbolTable[levelScope][p[1]] = p[3]
+
+    items = []
+    symbolTable[levelScope][p[1].upper()] = {}
+
+    for i in p[3]:
+        if hasattr(i, 'type') and (i.type == "TYPEDENOTER" or i.type == "TYPE" or i.type == "TYPELOCAL" or i.type == "FIELD" or i.type == "PARAMETER" or i.type == "TYPEDEF" or i.type == "AUXFIELDS"):
+
+                if isinstance(i.name,list):
+                    for j in i.name:
+                            x = i
+                            x.name = j.name
+
+                            symbolTable[levelScope][p[1].upper()][j.name] = x
+                else:
+
+                    if i.type == "FIELD" or i.type == "PARAMETER":
+                        symbolTable[levelScope][p[1].upper()][i.name.name] = i
+                    else:
+                        symbolTable[levelScope][p[1].upper()][i.name] = i
 
     #print "BLOCK: " , p[1]
-    p[0] = Block(p[1], p[3])
+    blockTable[p[1].upper()] = p[3]
+    p[0] = Block(p[1].upper(), p[3])
     pop_scope()
 
 
@@ -809,7 +904,7 @@ class Auxfields(Expr):
         self.value = value
 
     def __repr__(self):
-        return u"Auxfields Block %s" % str(self.value)
+        return "Auxfields Block %s" % unicode(self.value)
 
 
 class TypeDefinition(Expr):
@@ -818,7 +913,7 @@ class TypeDefinition(Expr):
         self.value = value
 
     def __repr__(self):
-        return u"TypeDefinition Block %s" % str(self.value)
+        return "TypeDefinition Block %s" % unicode(self.value)
 
 def p_auxfields_declaration(p):
     r'''
@@ -830,7 +925,29 @@ def p_auxfields_declaration(p):
     global levelScope
     #print symbolTable, " ", levelScope
 
-    symbolTable[levelScope][p[1]] = p[3]
+
+    items = []
+
+    symbolTable[levelScope][p[1].upper()] = {}
+
+    for i in p[3]:
+        if hasattr(i, 'type') and (i.type == "TYPEDENOTER" or i.type == "TYPE" or i.type == "TYPELOCAL" or i.type == "FIELD" or i.type == "PARAMETER" or i.type == "TYPEDEF"):
+                items.append(i)
+
+                if isinstance(i.name,list):
+                    for j in i.name:
+                            x = i
+                            x.name = j.name
+                            symbolTable[levelScope][p[1].upper()][j.name] = x
+                else:
+                    if i.type == "FIELD" or i.type == "PARAMETER":
+                        symbolTable[levelScope][p[1].upper()][i.name.name] = i
+                    else:
+                        symbolTable[levelScope][p[1].upper()][i.name] = i
+
+
+       # vars[i.name] = { 'type' : i.typeOf , 'value' : ''}
+
     p[0] = Auxfields(p[3])
     pop_scope()
 
@@ -843,6 +960,7 @@ def p_type_declaration(p):
     '''
 
     p[0] = TypeDefinition(p[2])
+    print p[2]
 
 
 def p_procedure_identification(p):
@@ -902,6 +1020,7 @@ def p_new_ordinal_type(p):
                          | subrange_type
     '''
 
+
     p[0] = p[1]
 
 class Enumerated(Expr):
@@ -911,7 +1030,7 @@ class Enumerated(Expr):
         self.value = value
 
     def __repr__(self):
-        return u"Enumerated %s" % self.value
+        return "Enumerated %s" % self.value
 
 
 
@@ -975,12 +1094,12 @@ class TypeEnumeratedItem(Expr):
 
     def __init__(self, name, value, languages):
         self.type = "ENUMERATEDITEM"
-        self.name = name
+        self.name = name.upper()
         self.languages = languages
-        self.values = value
+        self.value = value
 
     def __repr__(self):
-        return u"EnumeratedItem %s %s"  % (self.name, self.values)
+        return "EnumeratedItem %s %s"  % (self.name, self.value)
 
 
 def p_enumerated_list(p):
@@ -990,6 +1109,8 @@ def p_enumerated_list(p):
     '''
 
     items = []
+
+
 
     if len(p) > 5:
         if p[1] != None and isinstance(p[5], list) and p[5] != None:
@@ -1011,7 +1132,7 @@ class Integer(int):
         self.value = value
 
     def __repr__(self):
-        return u"%d"  % (self.value)
+        return "%d"  % (self.value)
 
 
 
@@ -1022,7 +1143,7 @@ class Real(float):
         self.value = value
 
     def __repr__(self):
-        return u"REAL %d"  % (self.value)
+        return "REAL %d"  % (self.value)
 
 
 
@@ -1085,7 +1206,7 @@ class Array(Expr):
             self.size = size
 
     def __repr__(self):
-        return u"Array [%s] of %s"  % (self.array_type, self.size)
+        return "Array [%s] of %s"  % (self.array_type, self.size)
 
 
 
@@ -1121,7 +1242,7 @@ def p_ordinal_type(p):
     '''
 
     if p.slice[1].type == "IDENTIFIER":
-        p[0] = Identifier(p[1])
+        p[0] = p[1]
     else:
         p[0] = p[1]
 
@@ -1141,7 +1262,7 @@ class Set(Expr):
             self.size = size
 
     def __repr__(self):
-        return u"Set [%s] of %s"  % (self.set_t, self.size)
+        return "Set [%s] of %s"  % (self.set_t, self.size)
 
 def p_set_type(p):
     '''
@@ -1240,14 +1361,21 @@ def p_locals_declaration(p):
     if p[1] != None and isinstance(p[1],list):
         for i in p[1]:
             items.append(i)
-            symbolTable[levelScope][str(i.name)] = TypeLocal(i.name,p[3] )
+            if hasattr(i.name, "name"):
+                symbolTable[levelScope][str(i.name.name).upper()] = TypeLocal(i.name.name,p[3] )
+            else:
+                symbolTable[levelScope][str(i.name).upper()] = TypeLocal(i.name,p[3] )
+
 
         p[0] =  TypeLocal( items, p[3] )
 
     else:
 
-        p[0] =  TypeLocal( p[1],p[3] )
-        symbolTable[levelScope][str(p[1].name)] = p[3]
+        p[0] =  TypeLocal( str(p[1].name).upper(),p[3] )
+        if hasattr(p[1].name, "name"):
+            symbolTable[levelScope][str(p[1].name.name).upper()] = p[3]
+        else:
+            symbolTable[levelScope][str(p[1].name).upper()] = p[3]
 
 def p_type_definition_list(p):
     r'''
@@ -1309,7 +1437,7 @@ def p_type_definition(p):
         t = TypeC(p[1], p[3])
         p[0] = t
 
-    symbolTable[levelScope][p[0].name] = t
+    symbolTable[levelScope][p[0].name.upper()] = t
 
 
 
@@ -1329,7 +1457,7 @@ class TModifier(Expr):
         self.value = value
 
     def __repr__(self):
-        return u"TModifier: " + self.value
+        return "TModifier: " +  self.value
 
 def p_tmodifiers(p):
     '''
@@ -1484,8 +1612,8 @@ class ParamModifier(Expr):
 
     def __repr__(self):
         if self.value == None:
-            return u"ParamModifier: None"
-        return u"ParamModifier: " + self.value
+            return "ParamModifier: None"
+        return "ParamModifier: " + self.value
 
 def p_parameter_modifiers(p):
     r'''    parameter_modifiers :
@@ -1590,12 +1718,13 @@ def p_fields_declaration(p):
 
         p[0] = items
 
-        if p[1] != None:
+        if p[0] != None:
 
             if isinstance(p[1],list):
                 for i in p[1]:
-
-                    symbolTable[levelScope][str(i.name)] = f
+                    #print i.name
+                    pass
+                    #symbolTable[levelScope][str(i.name).upper()] = f
 
     else:
 
@@ -1607,7 +1736,7 @@ def p_fields_declaration(p):
             f = Field(Identifier(p[1]), p[2], p[3], p[4], p[6])
             p[0] = f
 
-        symbolTable[levelScope][str(p[0].name)] = f
+        #symbolTable[levelScope][str(p[1]).upper()] = f
 
  #       vars[str(p[0].name)] = p[0]
 
@@ -1672,6 +1801,13 @@ def p_parameter_declaration(p):
 
     '''
 
+    global symbolTable
+    global levelScope
+
+
+
+
+
     items = []
 
   # if p[1] != None and isinstance(p[1],list):
@@ -1697,6 +1833,7 @@ def p_parameter_declaration(p):
 
             if type(p[1]) == None or p[1] == "":
                 paramType = "IMPORT"
+
             p[0] = Parameter(items,p[4], paramType)
         else:
             paramType = p[1]
@@ -1705,7 +1842,9 @@ def p_parameter_declaration(p):
             if type(p[1]) == types.NoneType or p[1] == "":
                 paramType = "IMPORT"
 
+
             p[0] = Parameter(p[2],p[4],paramType)
+            symbolTable[levelScope][p[2].name] = p[0]
     else:
 
         paramType = p[1]
@@ -1871,7 +2010,10 @@ def p_mult_expression(p):
     '''
     try:
         if len(p) > 2:
-            p[0] = BinOp(p[1],p[2],p[3])
+            if p.slice[2].type == "IN":
+                p[0] = BinOp(p[1],"IN",p[3])
+            else:
+                p[0] = BinOp(p[1],p[2],p[3])
         else:
             p[0] = p[1]
 
@@ -1881,7 +2023,7 @@ def p_mult_expression(p):
 
 def p_unary_expression(p):
     r'''
-                    unary_expression : sign unary_expression
+                    unary_expression : sign unary_expression %prec sign
                                      | exp_expression
     '''
 
@@ -1961,7 +2103,7 @@ def p_unsigned_constant(p):
     '''
 
     if p.slice[1].type == "RF" or p.slice[1].type == "EMPTY" or p.slice[1].type == "DK":
-        p[0] = String(p[1], p[1])
+        p[0] = String(p[1])
     else:
         p[0] = String(p[1])
 
@@ -2008,12 +2150,12 @@ def p_member_designator(p):
 class Identifier(Expr):
     def __init__(self, name, value = None):
         self.type = "IDENTIFIER"
-        self.name = name
+        self.name = name.upper()
         self.value = value
 
 
     def __repr__(self):
-        return stdout_encode('ID:{0}:{1}').format(self.name, self.value)
+        return stdout_encode('ID:{0}').format(self.name)
 
 
 def p_variable_access(p):
@@ -2037,7 +2179,7 @@ class IndexedVariable(Expr):
 
 
     def __repr__(self):
-        return stdout_encode('<Indexed Variable> {0}[{1}]').format(self.name, self.index)
+        return stdout_encode('{0}[{1}]').format(self.name, self.index)
 
 
 def p_indexed_variable(p):
@@ -2077,19 +2219,21 @@ class FieldDesignator(Expr):
         self.method = method
 
     def __repr__(self):
-        return u"%s.%s " % (self.value, self.method)
+        return "%s.%s " % (self.value, self.method)
 
 
 
 def p_field_designator(p):
     r'''
         field_designator : variable_access DECIMAL IDENTIFIER
-                        | variable_access DECIMAL ORD
-                          | variable_access DECIMAL CARDINAL
+                         | variable_access DECIMAL ORD
+                         | variable_access DECIMAL CARDINAL
 
     '''
 
     p[0] = FieldDesignator(p[1], p[3])
+
+
 class Keep(Expr):
 
 
@@ -2099,7 +2243,7 @@ class Keep(Expr):
         self.value = value
 
     def __repr__(self):
-        return u"Keep %s " % (self.value)
+        return "Keep %s " % (self.value)
 
 
 
@@ -2118,7 +2262,11 @@ class CallProc(Expr):
         self.params = params
 
     def __repr__(self):
-        return stdout_encode('<(Call Proc: {0} Params: {1})>').format(self.name, self.params)
+
+        if self.params == None:
+            return stdout_encode('|QUESTION [{0}]|').format(self.name)
+        else:
+            return stdout_encode('|[Procedure or Block]: {0} Params:{1} |').format(self.name, self.params)
 
 class CallBuildIn(Expr):
     def __init__(self, name, params = None):
@@ -2127,7 +2275,7 @@ class CallBuildIn(Expr):
         self.params = params
 
     def __repr__(self):
-        return stdout_encode('<(Call BuildIn: {0} Params: {1})>').format(self.name, self.params)
+        return stdout_encode('| [BUILTIN]{0} Params: {1} |').format(self.name, self.params)
 
 def p_procedure_statement(p):
     r'''
@@ -2170,15 +2318,6 @@ def p_actual_parameter(p):
 
     p[0] = p[1]
 
-
-"""
-                            |  expression COLON expression
-                            |  expression COLON expression COLON expression
-
-
-"""
-
-
 def p_statement_list(p):
     r'''statement_list :  statement_list statement
                         | statement
@@ -2215,7 +2354,7 @@ class ModuleCall(Expr):
         self.params = params
 
     def __repr__(self):
-        return stdout_encode('<(ModuleCall: {0} Index: {1} Params: {2})>').format(self.name, self.index, self.params)
+        return stdout_encode('{0}[{1}]()').format(self.name, self.index, self.params)
 
 
 
@@ -2242,9 +2381,6 @@ def p_statement(p):
                     | signal_statement
                     | not_statement
                     | layout_statement
-
-
-
 
     '''
     p[0] =  p[1]
@@ -2297,7 +2433,7 @@ class InvolvingStatement(Expr):
     def __repr__(self):
 
         if self.name != None and self.value != None:
-            return u"INVOLVING STATEMENT %s %s" % (self.name, self.value)
+            return "INVOLVING STATEMENT %s %s" % (self.name, self.value)
         else:
             return "Missing INVOLVING Statement"
 
@@ -2307,8 +2443,6 @@ def p_involving_vars(p):
                        | INVOLVING params
                        | INVOLVING TAG
                        |
-
-
     '''
 
     if len(p) > 2:
@@ -2330,7 +2464,7 @@ class CheckStatement(Expr):
 
 
     def __repr__(self):
-        return u"CHECK STATEMENT %s %s %s" % (self.left, self.right, self.literal)
+        return "CHECK STATEMENT %s %s %s" % (self.left, self.right, self.literal)
 
 
 
@@ -2353,7 +2487,7 @@ class LayoutStatement(Expr):
 
 
     def __repr__(self):
-            return u"LAYOUT STATEMENT %s %s %s" % (self.left, self.right, self.literal)
+            return "LAYOUT STATEMENT %s %s %s" % (self.left, self.right, self.literal)
 
 
 def p_layout_statement(p):
@@ -2372,7 +2506,7 @@ class SignalStatement(Expr):
 
 
     def __repr__(self):
-        return u"SIGNAL STATEMENT %s %s %s" % (self.left, self.right, self.literal)
+        return "SIGNAL STATEMENT %s %s %s" % (self.left, self.right, self.literal)
 
 
 def p_signal_statement(p):
@@ -2393,7 +2527,7 @@ class NotBinStatement(Expr):
 
 
     def __repr__(self):
-        return u"NOTBINSTATEMENT %s %s %s" % (self.left, self.right, self.literal)
+        return "NOTBINSTATEMENT %s %s %s" % (self.left, self.right, self.literal)
 
 
 
@@ -2414,36 +2548,66 @@ def p_not_statement(p):
 
 def p_if_statement(p):
     r'''
-        if_statement :    IF boolean_expression THEN statement_list else_statement_list ENDIF
-                        | IF boolean_expression THEN statement_list ENDIF
+        if_statement :    IF boolean_expression THEN statement_list elif_statements else_statement_list ENDIF
+'''
 
- '''
+#                        | IF boolean_expression THEN statement_list ELSE statement_list ENDIF
+#                        | IF boolean_expression THEN statement_list else_statement_list ENDIF
 
 
-    if p.slice[5].type == 'else_statement_list':
-        p[0] = IfElseStatement(p[2], p[4], p[5])
-    else:
-        p[0] = IfStatement(p[2], p[4])
+    #if isinstance(p.slice[5],list):
+    #    p[0] = IfElseStatement(p[2],p[4])
 
-    #| IF boolean_expression THEN statement_list else_statement_list ENDIF
 
-    #print p[0]
+    #p[0] =
+
+    p[0] = IfElseStatement(p[2],p[4], p[5],p[6])
+ #if p.slice[5].type == 'else_statement_list':
+ #       print "ELSE_STATEMENT_LIST"
+ #       p[0] = IfElseStatement(p[2], p[4], p[5])
+ #       print p[5]
+ #       print p[4]
+ #   elif len(p.slice) > 6 and p.slice[6].type == 'statement_list':
+ #       p[0] = IfElseStatement(p[2], p[4], p[6])
+ #       print p[6]
+ #       print "ELSE USING STATEMENT LIST"
+ #   else:
+ #       p[0] = IfStatement(p[2], p[4])
+ #       print "JUST STATEMENT LIST"
+
+
+def p_elif_statements(p):
+        r''' elif_statements :
+                                |  ELSEIF boolean_expression THEN statement_list elif_statements '''
+
+
+        if len(p.slice) > 1:
+            p[0] = ElseIfStatement(p[2],p[4],p[5])
+
 
 def p_else_statement_list(p):
     r'''
-        else_statement_list : ELSEIF boolean_expression THEN statement_list else_statement_list
-                            | ELSEIF boolean_expression THEN statement_list
+        else_statement_list :
                             | ELSE statement_list
+            '''
 
-    '''
+#ELSEIF boolean_expression THEN statement_list
+#                            | ELSEIF boolean_expression THEN statement_list ELSE statement_list
+#                            | ELSEIF boolean_expression THEN statement_list else_statement_list
+#    '''
 
-    if p.slice[2] == 'boolean_expression' and len(p.slice) > 5:
-        p[0] = IfElseStatement(p[2], p[4], p[5])
-    elif p.slice[2] == 'boolean_expression':
-        p[0] = IfStatement(p[2], p[4])
-    else:
+#    if p.slice[2] == 'boolean_expression' and len(p.slice) > 5 and p.slice[5] == 'ELSE':
+#        print "ELSEIF one"
+#        p[0] = IfElseStatement(p[2], p[4], p[6])
+#    elif p.slice[2] == 'boolean_expression' and len(p.slice) > 5 and p.slice[5]:
+#        print "ELSEIF two"
+#        p[0] = IfElseStatement(p[2], p[4], p[5])
+#    elif p.slice[2] == 'boolean_expression':
+#        print "ELSEIF three"
+#        p[0] = IfStatement(p[2], p[4])
+
+    if len(p.slice) > 2 and p[2] != None:
         p[0] = ElseStatement(p[2])
-
     #print p[0]
 
 
@@ -2452,11 +2616,7 @@ def p_assignment_statement(p):
     r'''
         assignment_statement : variable_access ASSIGN expression
     '''
-
     p[0] = BinOp(p[1], ':=', p[3])
-    #vars[str(p[1])] = p[3]
-
-
 
 def p_tempty(p):
     r'tempty :'
@@ -2464,7 +2624,7 @@ def p_tempty(p):
 
 
 def p_error(p):
-    print "Syntax error at '%s %s %d %d'" % (p.value, p.type, p.lineno, p.lexpos)
+    print "Syntax error at '%s %s %s %d %d'" % (p, p.value, p.type, p.lineno, p.lexpos)
 
 import logging
 logging.basicConfig(
@@ -2500,35 +2660,47 @@ result = parser.parse(s, debug=log)
 #        print e
 
 
-#pprint.pprint(symbolTable)
-#pprint.pprint(result)
 
 def getSymbol(symb):
     global symbolTable
+    pprint.pprint(vars)
     print "Looking for symbol", symb
 
     if isinstance(symb, list):
         return None
 
-    for i in range(len(symbolTable)-1,0,-1):
-        if symbolTable[i].has_key(symb):
+    for i in range(len(symbolTable)-1,-1,-1):
+        if symbolTable[i].has_key(symb) :
                 return symbolTable[i][symb]
+        else:
+            for k in symbolTable[i].iterkeys():
 
+                if isinstance(symbolTable[i][k], dict) and symbolTable[i][k].has_key(symb):
+                    return symbolTable[i][k][symb]
 
     return None
 
 
 vars = {
-        "ActiveLanguage" : { 'type' : "INTEGER", 'value' : 1} ,
-                "CORENG" : { 'type' : "INTEGER", 'value' : 1},
-                "CORSPN" : { 'type' : "INTEGER", 'value' : 2},
-                "PRXENG" : { 'type' : "INTEGER", 'value' : 3},
-                "PRXSPN" : { 'type' : "INTEGER", 'value' : 4},
-                "EXTENG" : { 'type' : "INTEGER", 'value' : 5},
-                "EXTSPN" : { 'type' : "INTEGER", 'value' : 6},
-                 "MEDIA" : { 'type' : "INTEGER", 'value' : 7}
+        "ACTIVELANGUAGE" : { 'name': "ACTIVELANGUAGE" , 'type' : "INTEGER", 'value' : 3} ,
+                "CORENG" : { 'name' :"CORENG", 'type' : "INTEGER", 'value' : 1},
+                "CORSPN" : { 'name' :"CORSPN", 'type' : "INTEGER", 'value' : 2},
+                "PRXENG" : { 'name' :"PRXENG", 'type' : "INTEGER", 'value' : 3},
+                "PRXSPN" : { 'name' :"PRXSPN", 'type' : "INTEGER", 'value' : 4},
+                "EXTENG" : { 'name' :"EXTENG", 'type' : "INTEGER", 'value' : 5},
+                "EXTSPN" : { 'name' :"EXTSPN",'type' : "INTEGER", 'value' : 6},
+                "MEDIA" : { 'name' :"MEDIA", 'type' : "INTEGER", 'value' : 7},
+                "TYPEACONSISTENT" : { 'name' :"TYPEACONSISTENT", 'type' : "INTEGER", 'value' : 1},
+                "TYPEBCONSISTENT" : { 'name' :"TYPEBCONSISTENT", 'type' : "INTEGER", 'value' : 2},
+                "CASHBALANCE" : { 'name' :"CASHBALANCE", 'type' : "INTEGER", 'value' : 3},
+                "INCONSISTENT" : { 'name' : "INCONSISTENT", 'type' : "INTEGER", 'value' : 4},
+                "NO": { 'name' :"NO", 'type' : 'TYESNO' , 'value' : 5 },
+                "YES" : { 'name' :"YES", 'type' : 'TYESNO' , 'value' : 1}
         }
 
+for i in range(1,84):
+    arg = "C%02d" % i
+    vars[arg] = { 'type' : "INTEGER", 'value' : i}
 
 def evaluateSubtree(node):
     global symbolTable, levelScope, vars
@@ -2536,18 +2708,20 @@ def evaluateSubtree(node):
     retVal = None
 
 
+
+
     if isinstance(node,list):
         for i in node:
 
             if hasattr(i, "value") and i.type != "FOR":
                 if isinstance(i.value,list):
-                    print "list[", i, "]->", i.value, i.type
+                    #print "list[", i, "]->", i.value, i.type
                     evaluateSubtree(i.value)
                 else:
-                     print "HAS[",i,"]->", i, i.type
+                     #print "HAS[",i,"]->", i, i.type
                      evaluateSubtree(i)
             else:
-                print "NO[",i,"]-->", i,  i.type
+                #print "NO[",i,"]-->", i,  i.type
                 retVal = evaluateSubtree(i)
 
     elif not isinstance(node, list) and node.type == "STRING":
@@ -2558,22 +2732,16 @@ def evaluateSubtree(node):
         return { 'type' : node.type, 'value' : node.value }
 
     elif not isinstance(node, list) and node.type == "IDENTIFIER":
-        print node
-        s = getSymbol(node.name)
-        print "It is an identifier!", s
-        if not vars.has_key(node.name):
-            print "setting variable", s
 
-            if (s.type == "TYPEDENOTER"):
-                t = s.value
-            elif (s.value.type == "TYPEDENOTER"):
-                t = s.value.value
+        return node
 
-            vars[node.name] = { 'name' : node.name, 'value': None, 'type': t}
+    elif not isinstance(node, list) and node.type == "CALLBUILD":
 
-        return vars[node.name]
+        return { 'name' :   node.name , 'value' : '' , 'type' : 'STRING' }
 
+    elif not isinstance(node, list) and node.type == "INDEXEDVARIABLE":
 
+        return {  'name' :   node.name, 'value' : '' , 'type' : 'STRING' }
 
     if not isinstance(node, list):
         print "PASSED: " , node, " TYPE: ", node.type
@@ -2591,7 +2759,7 @@ def evaluateSubtree(node):
            final = evaluateSubtree(node.final)
 
            for i in range(initial['value'],final['value'], direction):
-               vars[control['name']] = i
+               vars[control['name']] = { 'type' : 'INTEGER', 'name' : control['name'], 'value' : i }
                print "LOOP, ", i, node.value, node.control
                pprint.pprint(node.value)
                evaluateSubtree(node.value)
@@ -2613,48 +2781,103 @@ def evaluateSubtree(node):
 
         if nleft['value']:
             nright = evaluateSubtree(node.second)
+        elif node.third != None and evaluateSubtree(node.third):
+            nright = evaluateSubtree(node.third)
+        else:
+            if node.fourth:
+                nright = evaluateSubtree(node.fourth)
+
+    if not isinstance(node, list) and node.type == "ELSEIF":
+        print "ELSEIF"
+
+        nleft = evaluateSubtree(node.first)
+
+        if nleft['value']:
+            nright = evaluateSubtree(node.second)
         else:
             nright = evaluateSubtree(node.third)
+
+
+    if not isinstance(node, list) and node.type == "ELSE":
+         evaluateSubtree(node.first)
 
     if not isinstance(node, list) and node.type == "BINOP":
 
         nleft = evaluateSubtree(node.left)
         nright = evaluateSubtree(node.right)
+
+
         pprint.pprint(vars)
 
-        #if (hasattr(nleft,"name")) and getSymbol(nleft.name) and vars.has_key(nleft.name):
-        #    left = vars[nleft.name] #broken
-        #elif (hasattr(nleft,"type")) and nleft.type == "LITERAL":
-        #    left = nleft
-        #elif (hasattr(nleft,"type")) and nleft.type == "IDENTIFIER":
-        #    left =  nleft
-        #else:
-        left = nleft
 
-        #if (hasattr(nright,"name")) and getSymbol(nright.name) and vars.has_key(nright.name):
-        #    right = vars[nright.name] # broken
-        #elif (hasattr(nright,"type")) and nright.type == "LITERAL":
-        #    right = nright
-        #elif (hasattr(nright,"type")) and nright.type == "IDENTIFIER":
-        #    right =  nright
-        #else:
+        left = nleft
         right = nright
 
         if node.op == ":=":
-            print "TRYING ASSIGN ON ", left
 
+            print "TRYING ASSIGN ON ", left.name, right
 
-            if (getSymbol(left['name'])):
-                 print "Symbol: ", getSymbol(left['name'])
+            if (getSymbol(left.name)):
+                 print "Symbol: ", getSymbol(left.name)
 
-                 s = getSymbol(left['name'])
+                 s = getSymbol(left.name)
+
+                 if hasattr(right, "type"):
+                     if right.type == "STRING": # we are assigning a literal
+                         vars[left.name] = { 'type' : "STRING", 'value' : right.value }
+
+                     if right.type == "INTEGER": # we are assigning an integer
+                         vars[left.name] = { 'type' : "INTEGER", 'value' : right.value }
+
+                 else:
+                     # this is a variable value, assign
+                     vars[left.name] = right
                  #pprint.pprint(s.value.value.value)
-                 if hasattr(right, 'type'):
-                     print "Right type:", right.type
-                 print "Right is: ", right
-                 print "The right value is: ", right['value']
-                 vars[left['name']]['value'] = right['value']
-                 print pprint.pprint(vars)
+                 #print type(right)
+                 #if hasattr(right, 'type'):
+                 #    print "Right type:", right.type
+                 #print "Right is: ", right
+                 #print "The right value is: ", right['value']
+                 #vars[left['name']]['value'] = right['value']
+                 #print pprint.pprint(vars)
+
+        elif node.op == "=":
+
+            print left, "---COMPARE---", right
+
+
+            typeOfSymbol = None
+
+            if left.type == "IDENTIFIER" and not vars.has_key(left.name):
+
+
+                    typeOfSymbol = getSymbol(left.name).value.value
+                    typeDefinition = getSymbol(typeOfSymbol)
+
+                    if not typeOfSymbol == "STRING" and not typeOfSymbol == "INTEGER":
+
+                        if typeDefinition.value.value.type == "ENUMERATED":
+                            for tz in typeDefinition.value.value.value:
+                                vars[tz.name] = { 'name' : tz.name , 'value' : tz.value , 'type' : typeOfSymbol}
+
+
+            if right.type == "IDENTIFIER" and not vars.has_key(right.name):
+
+                # we need to figure out this comparison then
+                # get the type of the left symbol
+                typeDefinition = getSymbol(vars[left.name]['type'])
+
+                if typeDefinition.value.value.type == "ENUMERATED":
+                    for tz in typeDefinition.value.value.value:
+                        vars[tz.name] = { 'name' : tz.name , 'value' : tz.value , 'type' : vars[left.name]['type']}
+
+
+
+            if vars[left.name]['value'] == vars[right.name]['value']:
+                return { "type" : 'INTEGER' , 'value' : 1 }
+            else:
+                return { "type" : 'INTEGER' , 'value' : 0 }
+
 
         elif node.op == "*":
             print left
@@ -2667,11 +2890,21 @@ def evaluateSubtree(node):
 
 
         elif node.op == "+":
+            print left, " add ", right
 
-            if left['type'] == "INTEGER" and right['type'] == "INTEGER":
-                return { "type" : 'INTEGER' , 'value' : int(left['value']) + int(right['value']) }
-            else:
-                return { "type" : "STRING" , 'value' : str(left['value']) + str(right['value']) }
+            if isinstance(left, dict) and isinstance(right, dict):
+
+
+                if left['type'] == "INTEGER" and right['type'] == "INTEGER":
+                    return { "type" : 'INTEGER' , 'value' : int(left['value']) + int(right['value']) }
+                else:
+                    return { "type" : "STRING" , 'value' : str(left['value']) + str(right['value']) }
+
+            elif isinstance(left, dict) and not isinstance(right,dict):
+
+                if left['type'] == "STRING":
+                    return { "type" : "STRING", 'value' : str(left['value'] + vars[right.name]['value']) }
+
 
         elif node.op == "-":
             if left['type'] == "INTEGER" and right['type'] == "INTEGER":
@@ -2702,17 +2935,43 @@ def evaluateSubtree(node):
             else:
                 return { "type" : 'INTEGER' , 'value' : 0 }
 
-        elif node.op == "=":
-            if left['value'] == right['value']:
+        elif node.op == "<>":
+
+            print left, "---DIFFl---", right
+
+
+            typeOfSymbol = None
+
+            if left.type == "IDENTIFIER" and not vars.has_key(left.name):
+
+
+                    typeOfSymbol = getSymbol(left.name).value.value
+                    typeDefinition = getSymbol(typeOfSymbol)
+
+                    if not typeOfSymbol == "STRING" and not typeOfSymbol == "INTEGER":
+
+                        if typeDefinition.value.value.type == "ENUMERATED":
+                            for tz in typeDefinition.value.value.value:
+                                vars[tz.name] = { 'name' : tz.name , 'value' : tz.value , 'type' : typeOfSymbol}
+
+
+            if right.type == "IDENTIFIER" and not vars.has_key(right.name):
+
+                # we need to figure out this comparison then
+                # get the type of the left symbol
+                typeDefinition = getSymbol(vars[left.name]['type'])
+
+                if typeDefinition.value.value.type == "ENUMERATED":
+                    for tz in typeDefinition.value.value.value:
+                        vars[tz.name] = { 'name' : tz.name , 'value' : tz.value , 'type' : vars[left.name]['type']}
+
+
+
+            if vars[left.name]['value'] == vars[right.name]['value']:
                 return { "type" : 'INTEGER' , 'value' : 1 }
             else:
                 return { "type" : 'INTEGER' , 'value' : 0 }
 
-        elif node.op == "<>":
-            if left['value'] != right['value']:
-                return { "type" : 'INTEGER' , 'value' : 1 }
-            else:
-                return { "type" : 'INTEGER' , 'value' : 0 }
 
         elif node.op == "AND":
             if left['value'] and right['value']:
@@ -2726,21 +2985,41 @@ def evaluateSubtree(node):
             else:
                 return { "type" : 'INTEGER' , 'value' : 0 }
 
+        elif node.op == "IN":
+            #if right['value'].has_key(left['value']):
+                return { "type" : 'INTEGER' , 'value' : 1 }
+            #else:
+            #    return { "type" : 'INTEGER' , 'value' : 0 }
 
     return node
 
 
+# push the parameters to the vars
+#
+#procedure BC_Txt_Bronchitis
+#  parameters
+#  import
+#    piC185_DifferentReporter :TYESNO
+#    piRVarsZ104_Lung_V: TYesNo
+#    piRVarsZ076_ReIwR_V: TEverInterviewed
+#    piRespondents1X058AFName: String
 
 
+vars["piRespondents1X058AFName".upper()] = { 'type' : "STRING", 'value' : "Adrian", "name"  : "piRespondents1X058AFName".upper() }
+vars["piRVarsZ076_ReIwR_V".upper()] = { 'type' : "TEVERINTERVIEWED", 'value' : 1, "name"  : "piRVarsZ076_ReIwR_V".upper() }
+vars["piRVarsZ104_Lung_V".upper()] = { 'type' : "TYESNO", 'value' : 1, "name"  : "piRVarsZ104_Lung_V".upper() }
+vars["piC185_DifferentReporter".upper()] = { 'type' : "TYESNO", 'value' : 1, "name"  : "piC185_DifferentReporter".upper() }
+vars["piRespondents1X060ASex".upper()] = { 'type' : 'TSEX', 'value' : 2 , 'name' : "piRespondents1X060ASex".upper() }
 
-
-
-
+symbolTable[0]['TYESNO'] = TypeC("TYESNO", TypeDenoter(Enumerated([TypeEnumeratedItem("YES", 1, "Yes"), TypeEnumeratedItem("NO", 5, "No")])))
+evaluateSubtree(procedureTable['BASIS_FILLS'])
+evaluateSubtree(procedureTable['TXT_C226'])
+evaluateSubtree(procedureTable['BC_TXT_BRONCHITIS'])
 #print pprint.pprint(symbolTable)
-pprint.pprint(result[1].value)
-print evaluateSubtree(result)
+#pprint.pprint(result[1].value)
+#pprint.pprint(evaluateSubtree(result))
 
 
 
-print pprint.pprint(vars)
+pprint.pprint(vars)
 
