@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# -*- coding: UTF-8 -*-
 __author__ = 'adrianmo'
 
 import ply.lex as lex
@@ -19,7 +19,11 @@ def stdout_encode(u, default='utf8'):
 
 data = None
 
-with codecs.open("hrs_typ.txt", encoding='utf8') as fl:
+with codecs.open("hrs_fills_init2.txt", encoding='utf8') as fl:
+        data4=fl.read()
+
+
+with codecs.open("hrs_typ3.txt", encoding='utf8') as fl:
         data=fl.read()
 
 with codecs.open("proc2.txt", encoding='utf8') as fl:
@@ -29,7 +33,7 @@ with codecs.open("hrs2_c.txt", encoding='utf8') as fl:
         data3=fl.read()
 
 
-data = data + data2 + data3
+data = data4 + data + data2 + data3
 
 data5 = """ AUXFIELDS D : STRING[20]
        BLOCK TACOS
@@ -109,6 +113,8 @@ levelScope = 0
 symbolTable = {0 : new_scope()}
 procedureTable = {}
 blockTable = {}
+Questions = {}
+Fills = {}
 
 def push_scope(scope):
     global levelScope, symbolTable
@@ -145,7 +151,7 @@ class String(unicode):
         self.value = value
 
     def __repr__(self):
-        return ("%s %s" % (self.type, self.value)).encode('utf8')
+        return ("%s %s" % (self.type, self.value)).encode('iso8859-1', 'ignore')
 
 class Boolean(Expr):
     def __init__(self, value):
@@ -170,11 +176,11 @@ class TypeC(Expr):
 
 class TypeRange(Expr):
 
-  def __init__(self, value, min, max):
+  def __init__(self, value, max, min):
         self.type = "RANGE"
         self.value = value
-        self.upperlimit = min
-        self.lowerlimit = max
+        self.upperlimit = max
+        self.lowerlimit = min
 
   def __repr__(self):
 
@@ -231,8 +237,7 @@ tokens = [
     "IN",
     "RULES",
     "ENDBLOCK",
-    "TRANSIENT",
-    "ENDPROCEDURE",
+     "ENDPROCEDURE",
     "TAG",
     "DOTDOT",
     "LESSEQUALTHAN",
@@ -266,8 +271,10 @@ tokens = [
     "DIFF",
     "TYPE",
     "YEAR",
+    "MONTH",
     "INTEGER",
     "STRING"
+
 
 
 ]
@@ -285,6 +292,7 @@ reserved = {
 'ENDIF' : "ENDIF",
 'BLOCK' : "BLOCK",
 'AUXFIELDS':'AUXFIELDS',
+'TRANSIT':'TRANSIT',
 'IMPORT' : 'IMPORT',
 'EXPORT' : 'EXPORT',
 'PARAMETERS':'PARAMETERS',
@@ -382,9 +390,19 @@ def t_TYPE(t):
     t.type = "TYPE"
     return t
 
+def t_MONTH(t):
+    r'[M][O][N][T][H]\s'
+    t.type = "MONTH"
+    t.value = "MONTH"
+
+    global state_in_types
+    if state_in_types == 1:
+        t.value = "IDENTIFIER"
+        t.type = "IDENTIFIER"
+    return t
 
 def t_YEAR(t):
-    r'[Y][E][A][R]'
+    r'[Y][E][A][R]\s'
     t.type = "YEAR"
     t.value = "YEAR"
     global state_in_types
@@ -700,6 +718,8 @@ def p_proc_or_block_declaration(p):
 
 class Field(Expr):
 
+    global Questions
+
     def __init__(self, name, tag, languages, description, typeOf, modifiers = None):
         self.type = "FIELD"
         self.name  = name
@@ -708,6 +728,19 @@ class Field(Expr):
         self.description = description
         self.typeOf = typeOf
         self.modifiers = modifiers
+
+        tag = str(tag).strip("()_S")
+
+        if tag and tag != "None":
+
+            try:
+                QName = name.name[:str(name.name).index("_")]
+                print QName
+                QName = QName.replace("S","")
+                Questions[QName] = self
+            except Exception, e:
+                print e
+                Questions[tag] = self
 
     def __repr__(self):
         return ("Field: %s Type: %s  Tag: %s " % (self.name, self.typeOf, self.tag)).encode('ascii','ignore')
@@ -1106,6 +1139,9 @@ def p_enumerated_list(p):
     r'''
         enumerated_list : IDENTIFIER enum_num_arg enum_languages_list COMMA enumerated_list
                         | IDENTIFIER enum_num_arg enum_languages_list
+                        | IDENTIFIER enum_num_arg COMMA enumerated_list
+                        | IDENTIFIER enum_num_arg
+
     '''
 
     items = []
@@ -1119,8 +1155,10 @@ def p_enumerated_list(p):
 
         items.insert(0, TypeEnumeratedItem(p[1], p[2], p[3]))
         p[0] = items
-    else:
+    elif len(p) > 3:
         p[0] = [TypeEnumeratedItem(p[1], p[2], p[3])]
+    else:
+        p[0] = [TypeEnumeratedItem(p[1], p[2], "")]
 
 
 
@@ -1795,7 +1833,7 @@ def p_parameter_declaration(p):
     r'''
               parameter_declaration : parameter_modifiers identifier_list COLON type_denoter
                                     | EXPORT identifier_list COLON type_denoter
-                                    | TRANSIENT identifier_list COLON type_denoter
+                                    | TRANSIT identifier_list COLON type_denoter
                                     | block_declaration
                                     | procedure_declaration
 
@@ -2055,6 +2093,7 @@ def p_built_in_functions(p):
                                | RANDOM
                                | POSITION
                                | YEAR
+                               | MONTH
                                | VAL
 
 
@@ -2220,6 +2259,8 @@ class FieldDesignator(Expr):
 
     def __repr__(self):
         return "%s.%s " % (self.value, self.method)
+
+
 
 
 
@@ -2616,7 +2657,21 @@ def p_assignment_statement(p):
     r'''
         assignment_statement : variable_access ASSIGN expression
     '''
+    global Fills
     p[0] = BinOp(p[1], ':=', p[3])
+
+    if p[1].type == "IDENTIFIER" and p[1].name[0] == "F" and p[1].name[1] == "L":
+
+        if not Fills.has_key(p[1].name):
+            Fills[p[1].name] = []
+
+        if p[3].type == "STRING" and p[3].value != '':
+            Fills[p[1].name].append(p[3].value)
+        elif p[3].type != "STRING":
+            Fills[p[1].name].append(p[3])
+
+
+
 
 def p_tempty(p):
     r'tempty :'
@@ -2861,6 +2916,32 @@ def evaluateSubtree(node):
                                 vars[tz.name] = { 'name' : tz.name , 'value' : tz.value , 'type' : typeOfSymbol}
 
 
+            if left.type == "FIELDDESIGNATOR":
+                variableName = left.value.name
+
+                functionName = left.method
+
+                if functionName == "ord":
+                    setattr(left,"name", variableName)
+
+
+
+
+
+
+
+            if not hasattr(right,'type'):
+
+                if right['type'] == "INTEGER":
+
+                    if vars[left.name]['value'] == right['value']:
+                        return { "type" : 'INTEGER' , 'value' : 1 }
+                    else:
+                        return { "type" : 'INTEGER' , 'value' : 0 }
+
+
+
+
             if right.type == "IDENTIFIER" and not vars.has_key(right.name):
 
                 # we need to figure out this comparison then
@@ -2994,6 +3075,7 @@ def evaluateSubtree(node):
     return node
 
 
+
 # push the parameters to the vars
 #
 #procedure BC_Txt_Bronchitis
@@ -3010,16 +3092,19 @@ vars["piRVarsZ076_ReIwR_V".upper()] = { 'type' : "TEVERINTERVIEWED", 'value' : 1
 vars["piRVarsZ104_Lung_V".upper()] = { 'type' : "TYESNO", 'value' : 1, "name"  : "piRVarsZ104_Lung_V".upper() }
 vars["piC185_DifferentReporter".upper()] = { 'type' : "TYESNO", 'value' : 1, "name"  : "piC185_DifferentReporter".upper() }
 vars["piRespondents1X060ASex".upper()] = { 'type' : 'TSEX', 'value' : 2 , 'name' : "piRespondents1X060ASex".upper() }
+vars['AIMPORT'] = { 'name' : 'AIMPORT', 'type' : 'TMONTH', 'value' : 5}
+
 
 symbolTable[0]['TYESNO'] = TypeC("TYESNO", TypeDenoter(Enumerated([TypeEnumeratedItem("YES", 1, "Yes"), TypeEnumeratedItem("NO", 5, "No")])))
 evaluateSubtree(procedureTable['BASIS_FILLS'])
-evaluateSubtree(procedureTable['TXT_C226'])
-evaluateSubtree(procedureTable['BC_TXT_BRONCHITIS'])
+pprint.pprint(evaluateSubtree(procedureTable['TXTTMONTH']))
+#evaluateSubtree(procedureTable['TXT_C226'])
+#evaluateSubtree(procedureTable['BC_TXT_BRONCHITIS'])
 #print pprint.pprint(symbolTable)
 #pprint.pprint(result[1].value)
 #pprint.pprint(evaluateSubtree(result))
 
 
 
-pprint.pprint(vars)
+#pprint.pprint(vars)
 
