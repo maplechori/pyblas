@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 __author__ = 'adrianmo'
-
+from datetime import date
 import ply.lex as lex
 import ply.yacc as yacc
 import string
@@ -9,7 +9,31 @@ import re
 import codecs,sys, unicodedata
 import pprint
 import logging
+import MySQLdb
+import pandas as pd1
+import pandas.io.sql as psql
+import os, types
+import g2import
 
+
+vars = {
+        "ACTIVELANGUAGE" : { 'name': "ACTIVELANGUAGE" , 'type' : "INTEGER", 'value' : 3} ,
+                "CORENG" : { 'name' :"CORENG", 'type' : "INTEGER", 'value' : 1},
+                "CORSPN" : { 'name' :"CORSPN", 'type' : "INTEGER", 'value' : 2},
+                "PRXENG" : { 'name' :"PRXENG", 'type' : "INTEGER", 'value' : 3},
+                "PRXSPN" : { 'name' :"PRXSPN", 'type' : "INTEGER", 'value' : 4},
+                "EXTENG" : { 'name' :"EXTENG", 'type' : "INTEGER", 'value' : 5},
+                "EXTSPN" : { 'name' :"EXTSPN",'type' : "INTEGER", 'value' : 6},
+                "MEDIA" : { 'name' :"MEDIA", 'type' : "INTEGER", 'value' : 7},
+                "TYPEACONSISTENT" : { 'name' :"TYPEACONSISTENT", 'type' : "INTEGER", 'value' : 1},
+                "TYPEBCONSISTENT" : { 'name' :"TYPEBCONSISTENT", 'type' : "INTEGER", 'value' : 2},
+                "CASHBALANCE" : { 'name' :"CASHBALANCE", 'type' : "INTEGER", 'value' : 3},
+                "INCONSISTENT" : { 'name' : "INCONSISTENT", 'type' : "INTEGER", 'value' : 4},
+                "NO": { 'name' :"NO", 'type' : 'TYESNO' , 'value' : 5 },
+                "YES" : { 'name' :"YES", 'type' : 'TYESNO' , 'value' : 1},
+                "PIUNFINDEX" : { 'name' :"PIUNFINDEX", 'type' : 'STRING' , 'value' : ''},
+
+        }
 
 
 sys.stdout = codecs.getwriter('utf8')(sys.stdout)
@@ -18,6 +42,11 @@ def stdout_encode(u, default='utf8'):
         return u
 
 data = None
+
+
+with codecs.open("basis2.txt", encoding='utf8') as fl:
+        data6=fl.read()
+
 
 with codecs.open("hrs_fills_init2.txt", encoding='utf8') as fl:
         data4=fl.read()
@@ -29,82 +58,53 @@ with codecs.open("hrs_typ3.txt", encoding='utf8') as fl:
 with codecs.open("proc2.txt", encoding='utf8') as fl:
         data2=fl.read()
 
-with codecs.open("hrs2_c.txt", encoding='utf8') as fl:
+#with codecs.open("hrs_c4.txt", encoding='utf8') as fl:
+#        data3=fl.read()
+
+#with codecs.open("hrs10_m1.inc", encoding='utf8') as fl:
+#        data3=fl.read()
+
+#with codecs.open("hrs10_m2.inc", encoding='utf8') as fl:
+#        data3=fl.read()
+
+
+#with codecs.open("hrs10_s.inc", encoding='utf8') as fl:
+#        data3=fl.read()
+
+#with codecs.open("hrs10_t.inc", encoding='utf8') as fl:
+#        data3=fl.read()
+
+#with codecs.open("hrs10_tn.inc", encoding='utf8') as fl:
+#        data3=fl.read()
+
+#with codecs.open("hrs10_w.inc", encoding='utf8') as fl:
+#        data3=fl.read()
+
+#tmp = data3
+
+#with codecs.open("hrs10_w1.inc", encoding='utf8') as fl:
+#        data3=fl.read()
+
+#tmp = tmp + data3
+
+#with codecs.open("hrs10_w2.inc", encoding='utf8') as fl:
+#        data3=fl.read()
+
+#tmp = tmp + data3
+
+#with codecs.open("hrs10_w_events.inc", encoding='utf8') as fl:
+#        data3=fl.read()
+
+#tmp = tmp + data3
+
+with codecs.open("hrs_a.txt", encoding='utf8') as fl:
         data3=fl.read()
 
+#data3 = tmp +  data3
 
-data = data4 + data + data2 + data3
+data = data6 + data4 + data + data2 + data3
 
-data5 = """ AUXFIELDS D : STRING[20]
-       BLOCK TACOS
-       PARAMETERS IMPORT T : STRING
-           BLOCK MEXICO
-               LOCALS A, B , K, X: INTEGER
-                      C : STRING
-               RULES
-                   A := 5
-                   B := A * A  + 3 - 16
-                   C := 'test' + 'world'
-
-               IF A < B AND A < B THEN
-
-                   C := 15
-                ELSE
-                    TOMBO
-                ENDIF
-            ENDBLOCK
-               FIELDS
-           C005_ (C005_)
-                 "
-                      ^FLC005 ^FLC005b ^FLIwer
-                      Def: (Medical doctors include specialists such as Dermatologists,
-                      Psychiatrists, Ophthalmologists, Osteopaths, Cardiologists,
-                      as well as family doctors, internists and physicians' assistants.
-                      Also include diagnoses made by Nurses and Nurse Practitioners.)"
-
-                 "
-                      ^FLC005 ^FLC005b ^FLIwer
-                      Def: (Medicos incluyen especialistas como dermatologos,
-                      psiquiatras, oftalmologos, osteopatas, cardiologos,
-                      al igual que medicos de familia, internistas y asistentes medicos (physicians' assistants).
-                      Tambien incluya los diagnosticos de enfermeras o enfermeras internistas (nurse practitioners).)"
-
-                 "
-                      ^FLC005 ^FLC005b ^FLIwer
-                      Def: (Medical doctors include specialists such as Dermatologists,
-                      Psychiatrists, Ophthalmologists, Osteopaths, Cardiologists,
-                      as well as family doctors, internists and physicians' assistants.
-                      Also include diagnoses made by Nurses and Nurse Practitioners.)"
-
-                 "
-                ^FLC005 ^FLC005b ^FLIwer
-                Def: (Medicos incluyen especialistas como dermatologos, psiquiatras, oftalmologos, osteopatas, cardiologos,
-                al igual que medicos de familia, internistas y asistentes medicos (physicians' assistants).
-                Tambien incluya los diagnosticos de enfermeras o enfermeras internistas (nurse practitioners).)"
-
-                 "[THIS QUESTION DOES NOT EXIST IN THE EXIT PORTION OF HRS]"
-
-                 "[THIS QUESTION DOES NOT EXIST IN THE EXIT PORTION OF HRS]"
-
-                    /"HIGH BLOOD PRESSURE"
-                    : TDispute2
-        RULES
-            IF A = 5 THEN
-                    STUPID
-                X := 0
-           FOR K := 1 TO 10 DO
-
-            X := X + 1
-              C := 'hi' + 'there'
-              X:= 2
-           ENDDO
-           ENDIF
-       ENDBLOCK                            """
-
-
-#data = data2
-
-#print data2
+#data =  data3
 
 def new_scope():
     return {}
@@ -116,6 +116,8 @@ blockTable = {}
 Questions = {}
 Fills = {}
 
+Fills["UNFTEXT"] = []
+
 def push_scope(scope):
     global levelScope, symbolTable
 
@@ -125,15 +127,10 @@ def push_scope(scope):
     if not symbolTable.has_key(levelScope):
         symbolTable[levelScope] = scope
 
-
-
-
 def pop_scope():
 
     global levelScope, symbolTable
     levelScope -= 1
-
-
 
 class Expr:
     pass
@@ -236,8 +233,9 @@ states = (
 tokens = [
     "IN",
     "RULES",
+    "ENDTABLE",
     "ENDBLOCK",
-     "ENDPROCEDURE",
+    "ENDPROCEDURE",
     "TAG",
     "DOTDOT",
     "LESSEQUALTHAN",
@@ -273,7 +271,12 @@ tokens = [
     "YEAR",
     "MONTH",
     "INTEGER",
-    "STRING"
+    "STRING",
+    "SHOW",
+    "RESERVECHECK",
+    "INSERT",
+
+
 
 
 
@@ -288,16 +291,18 @@ reserved = {
 'NOT' : 'NOT',
 'OR' : 'OR',
 'AND' : 'AND',
+"CAP" : "CAP",
 'ELSEIF' : 'ELSEIF',
 'ENDIF' : "ENDIF",
 'BLOCK' : "BLOCK",
+'TABLE' : 'TABLE',
 'AUXFIELDS':'AUXFIELDS',
 'TRANSIT':'TRANSIT',
 'IMPORT' : 'IMPORT',
 'EXPORT' : 'EXPORT',
 'PARAMETERS':'PARAMETERS',
-'SHOW' : 'SHOW',
 'KEEP' : 'KEEP',
+'TRUNC' : 'TRUNC',
 'ORD' : 'ORD',
 'CARDINAL' : 'CARDINAL',
 'ASK' : 'ASK',
@@ -310,7 +315,6 @@ reserved = {
 'ARRAY' : 'ARRAY',
 'OF' : 'OF',
 'RF' :'RF',
-
 'LOCALS' : 'LOCALS',
 'FIELDS' : 'FIELDS',
 'REPEAT' : 'REPEAT',
@@ -391,7 +395,7 @@ def t_TYPE(t):
     return t
 
 def t_MONTH(t):
-    r'[M][O][N][T][H]\s'
+    r'[M][O][N][T][H]'
     t.type = "MONTH"
     t.value = "MONTH"
 
@@ -402,7 +406,7 @@ def t_MONTH(t):
     return t
 
 def t_YEAR(t):
-    r'[Y][E][A][R]\s'
+    r'[Y][E][A][R]'
     t.type = "YEAR"
     t.value = "YEAR"
     global state_in_types
@@ -489,12 +493,16 @@ def t_fillcode_error(t):
 
 
 def t_TAG(t):
-    "\([A-Z][0-9]+[\.\d_A-Z]+\)"
+    r"\([A-Z][0-9]+[\.A-Z0-9]*[_]?\)|\([a-zA-Z]+[_][A-Z]+[_]?[A-Z]*\)|\(GENDER\)"
     #print t.value
     return t
 
 def t_ENDPROCEDURE(t):
     r'[Ee][Nn][Dd][Pp][Rr][Oo][Cc][Ee][Dd][Uu][Rr][Ee]'
+    return t
+
+def t_ENDTABLE(t):
+    r'[Ee][Nn][Dd][Tt][Aa][Bb][Ll][Ee]'
     return t
 
 
@@ -538,6 +546,13 @@ def t_PIPE(t):
     r'\|'
     return t
 
+def t_INSERT(t):
+    r'[Ii][Nn][Ss][Ee][Rr][Tt]'
+    return t
+
+def t_RESERVECHECK(t):
+    r'RESERVECHECK'
+    pass
 
 def t_FILL(t):
     r'\^'
@@ -729,21 +744,69 @@ class Field(Expr):
         self.typeOf = typeOf
         self.modifiers = modifiers
 
-        tag = str(tag).strip("()_S")
 
-        if tag and tag != "None":
+        tagQ = str(tag).strip("()")
+        Fills[tagQ] = { description }
 
-            try:
-                QName = name.name[:str(name.name).index("_")]
-                print QName
-                QName = QName.replace("S","")
-                Questions[QName] = self
-            except Exception, e:
-                print e
+
+        tag = str(tag).strip("()_")
+
+        QName = ""
+
+        if not isinstance(name, list):
+
+
+            if re.findall("_", str(name.name)):
+                try:
+                    if str(name.name).index("_") == len(name.name) - 1:
+                        QName = str(name.name[:str(name.name).index("_")])
+                    else:
+                        QName = str(name.name)
+
+                except Exception, e:
+                    print e
+            else:
+                QName = name.name
+
+                if QName != "" and QName[len(QName)-1] == "S":
+                   QName = QName[:len(QName)-1] + QName[len(QName)-1:].replace("S", "")
+                if QName != "" and QName[len(QName)-1] == "A":
+                   QName = QName[:len(QName)-1] + QName[len(QName)-1:].replace("A", "")
+
+
+
+            if (tag and tag != "None"):
+
+                Fills[tag] = { description }
+
+                if tag[len(tag)-1] == "S":
+                    tag = tag[:len(tag)-1] + tag[len(tag)-1:].replace("S", "")
+                if tag[len(tag)-1] == "A":
+                    tag = tag[:len(tag)-1] + tag[len(tag)-1:].replace("A", "")
+
                 Questions[tag] = self
+
+
+            elif QName != "":
+
+                Questions[QName] = self
+                Fills[QName] = { description }
+
+            else:
+                print "*** We shouldnt be here ***"
+
 
     def __repr__(self):
         return ("Field: %s Type: %s  Tag: %s " % (self.name, self.typeOf, self.tag)).encode('ascii','ignore')
+
+    def save(obj):
+        return (obj.__class__, obj.__dict__)
+
+    def load(cls, attributes):
+        obj = cls.__new__(cls)
+        obj.__dict__.update(attributes)
+        return obj
+
 
 
 class BinOp(Expr):
@@ -903,6 +966,7 @@ class SetIn(Expr):
 def p_block_declaration(p):
     r'''
         block_declaration : block_identification new_scope procedure_block ENDBLOCK
+                          | block_identification new_scope procedure_block ENDTABLE
     '''
     global symbolTable, levelScope
 
@@ -910,19 +974,19 @@ def p_block_declaration(p):
     symbolTable[levelScope][p[1].upper()] = {}
 
     for i in p[3]:
+        print i
         if hasattr(i, 'type') and (i.type == "TYPEDENOTER" or i.type == "TYPE" or i.type == "TYPELOCAL" or i.type == "FIELD" or i.type == "PARAMETER" or i.type == "TYPEDEF" or i.type == "AUXFIELDS"):
 
-                if isinstance(i.name,list):
+                if hasattr(i,"name") and isinstance(i.name,list):
                     for j in i.name:
                             x = i
                             x.name = j.name
 
                             symbolTable[levelScope][p[1].upper()][j.name] = x
                 else:
-
                     if i.type == "FIELD" or i.type == "PARAMETER":
                         symbolTable[levelScope][p[1].upper()][i.name.name] = i
-                    else:
+                    elif i.type != "TYPEDEF":
                         symbolTable[levelScope][p[1].upper()][i.name] = i
 
     #print "BLOCK: " , p[1]
@@ -952,6 +1016,7 @@ def p_auxfields_declaration(p):
     r'''
         auxfields_declaration : AUXFIELDS new_scope fields_declaration_list
 
+
     '''
 
     global symbolTable
@@ -973,9 +1038,11 @@ def p_auxfields_declaration(p):
                             x.name = j.name
                             symbolTable[levelScope][p[1].upper()][j.name] = x
                 else:
+                    print i.type
                     if i.type == "FIELD" or i.type == "PARAMETER":
                         symbolTable[levelScope][p[1].upper()][i.name.name] = i
-                    else:
+                    elif i.type != "TYPEDEF":
+                        print i.type
                         symbolTable[levelScope][p[1].upper()][i.name] = i
 
 
@@ -989,6 +1056,7 @@ def p_auxfields_declaration(p):
 def p_type_declaration(p):
     r'''
                 type_declaration : TYPE type_definition_list
+
 
     '''
 
@@ -1006,6 +1074,7 @@ def p_procedure_identification(p):
 def p_block_identification(p):
     r'''
             block_identification : BLOCK IDENTIFIER
+                                | TABLE  IDENTIFIER
     '''
     p[0] = p[2]
 
@@ -1172,7 +1241,13 @@ class Integer(int):
     def __repr__(self):
         return "%d"  % (self.value)
 
+    def save(obj):
+        return (obj.__class__, obj.__dict__)
 
+    def load(cls, attributes):
+        obj = cls.__new__(cls)
+        obj.__dict__.update(attributes)
+        return obj
 
 class Real(float):
 
@@ -1484,9 +1559,14 @@ def p_type_definition_part(p):
     r'''
                 type_definition_part : TYPE type_definition_list
 
+
+
     '''
 
-    p[0] = p[2]
+    if len(p) > 1:
+        p[0] = p[2]
+    else:
+        p[0] = p[1]
 
 
 class TModifier(Expr):
@@ -1629,6 +1709,7 @@ def p_optional_sections(p):
     '''
             optional_sections : parameters_declaration_part
 
+
     '''
     p[0] = p[1]
 
@@ -1656,6 +1737,8 @@ class ParamModifier(Expr):
 def p_parameter_modifiers(p):
     r'''    parameter_modifiers :
                                 | IMPORT
+                                | EXPORT
+                                | TRANSIT
 '''
 
     if len(p) > 1:
@@ -1725,8 +1808,8 @@ def p_fields_declaration(p):
                        | identifier_list field_description COLON type_denoter
                        | identifier_list COLON type_denoter COMMA tmodifiers_list
                        | identifier_list COLON type_denoter
-                       | IDENTIFIER TAG enum_languages_list field_description COLON type_denoter COMMA tmodifiers_list
-                       | IDENTIFIER TAG enum_languages_list field_description COLON type_denoter
+                       | identifier_list TAG enum_languages_list field_description COLON type_denoter COMMA tmodifiers_list
+                       | identifier_list TAG enum_languages_list field_description COLON type_denoter
 
     '''
 
@@ -1734,6 +1817,8 @@ def p_fields_declaration(p):
     items = []
 
 
+
+    #print p.slice, p[1]
 
     if p.slice[1].type == "identifier_list":
         #def __init__(self, name, tag, languages, description, typeOf, modifiers = None):
@@ -1755,7 +1840,7 @@ def p_fields_declaration(p):
             items.append(f)
 
         p[0] = items
-
+        print items
         if p[0] != None:
 
             if isinstance(p[1],list):
@@ -1783,6 +1868,8 @@ def p_parameters_declaration_part(p):
     r'''
         parameters_declaration_part : PARAMETERS parameters_declaration_list
                                     | rules_part
+                                    | block_declaration
+                                    | procedure_declaration
     '''
     #print "\t\tPARAMETERS"
 
@@ -1803,6 +1890,7 @@ def p_parameters_declaration_list(p):
     r'''
             parameters_declaration_list : parameter_declaration parameters_declaration_list
                                         | parameter_declaration
+
 
     '''
 
@@ -1832,10 +1920,8 @@ def p_parameters_declaration_list(p):
 def p_parameter_declaration(p):
     r'''
               parameter_declaration : parameter_modifiers identifier_list COLON type_denoter
-                                    | EXPORT identifier_list COLON type_denoter
-                                    | TRANSIT identifier_list COLON type_denoter
-                                    | block_declaration
-                                    | procedure_declaration
+
+
 
     '''
 
@@ -1858,39 +1944,30 @@ def p_parameter_declaration(p):
 #     p[0] =  TypeLocal( p[1], TypeDenoter(p[3]))
 
 
-
     if len(p) > 2 and p.slice[2].type == 'identifier_list':
         if p[2] != None and isinstance(p[2], list):
             for i in p[2]:
                 items.append(i)
-                 #def __init__(self, name, typepar, modifiers)
-                 # :
 
-            paramType = p[1]
-
-
-            if type(p[1]) == None or p[1] == "":
+            if isinstance(p[1], types.NoneType):
                 paramType = "IMPORT"
+            else:
+                paramType = p[1]
 
+            Parameter(items,p[4], paramType)
             p[0] = Parameter(items,p[4], paramType)
         else:
             paramType = p[1]
 
-            import types
-            if type(p[1]) == types.NoneType or p[1] == "":
-                paramType = "IMPORT"
 
+            if isinstance(p[1], types.NoneType):
+                paramType = "IMPORT"
 
             p[0] = Parameter(p[2],p[4],paramType)
             symbolTable[levelScope][p[2].name] = p[0]
     else:
 
-        paramType = p[1]
-
-        if p[1] == None or p[1] == "":
-            paramType = "IMPORT"
-
-        p[0] = paramType
+        p[0] = p[1]
 
 
 
@@ -2089,7 +2166,10 @@ def p_built_in_functions(p):
     r'''
             built_in_functions : STR
                                | LEN
+                               | INSERT
                                | SUBSTRING
+                               | CAP
+                               | TRUNC
                                | RANDOM
                                | POSITION
                                | YEAR
@@ -2108,7 +2188,8 @@ def p_primary(p):
                 | COUNT
                 | FLOAT
                 | SYSDATE
-                | LPAREN expression RPAREN
+                | LPAREN index_expression_list RPAREN
+
                 | built_in_functions LPAREN index_expression_list RPAREN
 
     '''
@@ -2269,6 +2350,8 @@ def p_field_designator(p):
         field_designator : variable_access DECIMAL IDENTIFIER
                          | variable_access DECIMAL ORD
                          | variable_access DECIMAL CARDINAL
+                         | variable_access DECIMAL SHOW
+                         | variable_access DECIMAL INSERT LPAREN expression RPAREN
 
     '''
 
@@ -2660,15 +2743,21 @@ def p_assignment_statement(p):
     global Fills
     p[0] = BinOp(p[1], ':=', p[3])
 
-    if p[1].type == "IDENTIFIER" and p[1].name[0] == "F" and p[1].name[1] == "L":
+    if p[1].type == "IDENTIFIER" and ((p[1].name[0] == "F" and p[1].name[1] == "L") or (len(p[1].name) > 3 and p[1].name[0] == "P" and p[1].name[1] == "E" and p[1].name[2] == 'F' and p[1].name[3] == 'L')):
 
         if not Fills.has_key(p[1].name):
-            Fills[p[1].name] = []
+            Fills[p[1].name] = list()
 
         if p[3].type == "STRING" and p[3].value != '':
+            Fills[p[1].name] = list( Fills[p[1].name])
             Fills[p[1].name].append(p[3].value)
-        elif p[3].type != "STRING":
-            Fills[p[1].name].append(p[3])
+        elif p[3].type != "STRING" and p[3]:
+
+            if p[3].type == "IDENTIFIER" and re.match("PIBASICFILL",p[3].name):
+                pass
+            else:
+                Fills[p[1].name] = list(Fills[p[1].name])
+                Fills[p[1].name].append(p[3])
 
 
 
@@ -2718,7 +2807,7 @@ result = parser.parse(s, debug=log)
 
 def getSymbol(symb):
     global symbolTable
-    pprint.pprint(vars)
+    #pprint.pprint(vars)
     print "Looking for symbol", symb
 
     if isinstance(symb, list):
@@ -2736,28 +2825,11 @@ def getSymbol(symb):
     return None
 
 
-vars = {
-        "ACTIVELANGUAGE" : { 'name': "ACTIVELANGUAGE" , 'type' : "INTEGER", 'value' : 3} ,
-                "CORENG" : { 'name' :"CORENG", 'type' : "INTEGER", 'value' : 1},
-                "CORSPN" : { 'name' :"CORSPN", 'type' : "INTEGER", 'value' : 2},
-                "PRXENG" : { 'name' :"PRXENG", 'type' : "INTEGER", 'value' : 3},
-                "PRXSPN" : { 'name' :"PRXSPN", 'type' : "INTEGER", 'value' : 4},
-                "EXTENG" : { 'name' :"EXTENG", 'type' : "INTEGER", 'value' : 5},
-                "EXTSPN" : { 'name' :"EXTSPN",'type' : "INTEGER", 'value' : 6},
-                "MEDIA" : { 'name' :"MEDIA", 'type' : "INTEGER", 'value' : 7},
-                "TYPEACONSISTENT" : { 'name' :"TYPEACONSISTENT", 'type' : "INTEGER", 'value' : 1},
-                "TYPEBCONSISTENT" : { 'name' :"TYPEBCONSISTENT", 'type' : "INTEGER", 'value' : 2},
-                "CASHBALANCE" : { 'name' :"CASHBALANCE", 'type' : "INTEGER", 'value' : 3},
-                "INCONSISTENT" : { 'name' : "INCONSISTENT", 'type' : "INTEGER", 'value' : 4},
-                "NO": { 'name' :"NO", 'type' : 'TYESNO' , 'value' : 5 },
-                "YES" : { 'name' :"YES", 'type' : 'TYESNO' , 'value' : 1}
-        }
-
 for i in range(1,84):
     arg = "C%02d" % i
     vars[arg] = { 'type' : "INTEGER", 'value' : i}
 
-def evaluateSubtree(node):
+def evaluateSubtree(node, debug = True):
     global symbolTable, levelScope, vars
 
     retVal = None
@@ -2798,8 +2870,8 @@ def evaluateSubtree(node):
 
         return {  'name' :   node.name, 'value' : '' , 'type' : 'STRING' }
 
-    if not isinstance(node, list):
-        print "PASSED: " , node, " TYPE: ", node.type
+    #if not isinstance(node, list):
+    #    print "PASSED: " , node, " TYPE: ", node.type
 
     if not isinstance(node, list) and node.type == "FOR":
            print "FOR LOOP"
@@ -2861,8 +2933,8 @@ def evaluateSubtree(node):
         nleft = evaluateSubtree(node.left)
         nright = evaluateSubtree(node.right)
 
-
-        pprint.pprint(vars)
+        #if debug == True:
+        #    pprint.pprint(vars)
 
 
         left = nleft
@@ -2875,6 +2947,15 @@ def evaluateSubtree(node):
             if (getSymbol(left.name)):
                  print "Symbol: ", getSymbol(left.name)
 
+                 if getSymbol(left.name) == "PIUNFTEXT":
+
+                     if not Fills.has_key('UNFTEXT'):
+                        Fills["UNFTEXT"] = []
+
+                     Fills['UNFTEXT'].append(right.value)
+
+
+
                  s = getSymbol(left.name)
 
                  if hasattr(right, "type"):
@@ -2886,7 +2967,15 @@ def evaluateSubtree(node):
 
                  else:
                      # this is a variable value, assign
-                     vars[left.name] = right
+                    if getSymbol(left.name) == "PIUNFTEXT":
+
+                        if not Fills.has_key('UNFTEXT'):
+                            Fills["UNFTEXT"] = []
+
+                        Fills['UNFTEXT'].append(right['value'])
+
+
+                    vars[left.name] = right
                  #pprint.pprint(s.value.value.value)
                  #print type(right)
                  #if hasattr(right, 'type'):
@@ -2902,6 +2991,7 @@ def evaluateSubtree(node):
 
 
             typeOfSymbol = None
+
 
             if left.type == "IDENTIFIER" and not vars.has_key(left.name):
 
@@ -2923,10 +3013,6 @@ def evaluateSubtree(node):
 
                 if functionName == "ord":
                     setattr(left,"name", variableName)
-
-
-
-
 
 
 
@@ -2979,13 +3065,27 @@ def evaluateSubtree(node):
                 if left['type'] == "INTEGER" and right['type'] == "INTEGER":
                     return { "type" : 'INTEGER' , 'value' : int(left['value']) + int(right['value']) }
                 else:
-                    return { "type" : "STRING" , 'value' : str(left['value']) + str(right['value']) }
+
+
+
+                    return { "type" : "STRING" , 'value' : unicode(left['value']) + unicode(right['value']) }
 
             elif isinstance(left, dict) and not isinstance(right,dict):
 
                 if left['type'] == "STRING":
-                    return { "type" : "STRING", 'value' : str(left['value'] + vars[right.name]['value']) }
 
+                    if right.type == "IDENTIFIER" and re.match("\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?(?:\.[A-Za-z0-9_]+)?|\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?",right.name):
+                        return { "type" : "STRING", 'value' : unicode(left['value'] + "^" + right.name ) }
+                    else:
+                        return { "type" : "STRING", 'value' : unicode(left['value'] + vars[right.name]['value']) }
+            elif isinstance(right, dict) and not isinstance(left,dict):
+
+                if right['type'] == "STRING":
+
+                    if left.type == "IDENTIFIER" and re.match("\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?(?:\.[A-Za-z0-9_]+)?|\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?",left.name):
+                        return { "type" : "STRING", 'value' : unicode("^" + left.name + right['value']) }
+                    else:
+                        return { "type" : "STRING", 'value' : unicode(vars[left.name]['value'] + right['value'] ) }
 
         elif node.op == "-":
             if left['type'] == "INTEGER" and right['type'] == "INTEGER":
@@ -3087,16 +3187,74 @@ def evaluateSubtree(node):
 #    piRespondents1X058AFName: String
 
 
-vars["piRespondents1X058AFName".upper()] = { 'type' : "STRING", 'value' : "Adrian", "name"  : "piRespondents1X058AFName".upper() }
+vars["piRespondents1X058AFName".upper()] = { 'type' : "STRING", 'value' : "[Respondent]", "name"  : "piRespondents1X058AFName".upper() }
 vars["piRVarsZ076_ReIwR_V".upper()] = { 'type' : "TEVERINTERVIEWED", 'value' : 1, "name"  : "piRVarsZ076_ReIwR_V".upper() }
 vars["piRVarsZ104_Lung_V".upper()] = { 'type' : "TYESNO", 'value' : 1, "name"  : "piRVarsZ104_Lung_V".upper() }
 vars["piC185_DifferentReporter".upper()] = { 'type' : "TYESNO", 'value' : 1, "name"  : "piC185_DifferentReporter".upper() }
-vars["piRespondents1X060ASex".upper()] = { 'type' : 'TSEX', 'value' : 2 , 'name' : "piRespondents1X060ASex".upper() }
-vars['AIMPORT'] = { 'name' : 'AIMPORT', 'type' : 'TMONTH', 'value' : 5}
+vars["piRespondents1X060ASex".upper()] = { 'type' : 'TSEX', 'value' : 1 , 'name' : "piRespondents1X060ASex".upper() }
+vars['AIMPORT'] = { 'name' : 'AIMPORT', 'type' : 'TMONTH', 'value' : 1}
+vars["sZ092_IwMo_V".upper()] = { 'type' : "STRING", 'value' : "[" + getSymbol('Z092_IwMo_V'.upper()).description + "]" }
+vars["sZ093_Iwyr_V".upper()] = { 'type' : "STRING", 'value' : "[" + getSymbol('Z093_IwYR_V'.upper()).description + "]" }
+vars["Z092IwMoV".upper()] = { 'type' : "STRING", 'value' : "[" + "prev interview month" + "]" }
+vars["Z093IwYrV".upper()] = { 'type' : "STRING", 'value' : "[" + "prev interview year" + "]" }
+vars["STRZ092".upper()] = { 'type' : "STRING", 'value' : "[" + "PREV WAVE IW [MONTH, ]YEAR" + "]" }
+vars["FILLHAS".upper()] = { 'type' : "STRING", 'value' : "DISPUTES PREVIOUS WAVE RECORD, BUT NOW HAS CONDITION"}
+vars["FILLNOTHAVE".upper()] = { 'type' : "STRING", 'value' : "DISPUTES PREVIOUS WAVE RECORD, DOES NOT HAVE CONDITION"}
+vars["FILLNO".upper()] = { 'type' : "STRING", 'value' : "NO"}
+vars["PIRESPONDENTS1X058AFNAME"] = { 'type' : "STRING" , 'value' : "[FIRST NAME OF INDIVIDUAL]"}
+vars['Z091'] = { 'type' : "STRING", 'value' : "PREV WAVE EMPLOYER NAME"}
+vars['PIRVARSZ092_IWMO_V'.upper()] = { 'type' : "STRING", 'value' : "[" + "prev interview month" + "]" }
+vars['RVARS.Z092_IWMO_V'.upper()] = { 'type' : "STRING", 'value' : "[" + "Number of times injured].[" +   getSymbol('Z092_IwMo_V'.upper()).description +  "]"}
+vars['RVARS.Z093_IWYR_V'.upper()] = { 'type' : "STRING", 'value' : "[" + "Number of times injured].[" +   getSymbol('Z093_Iwyr_V'.upper()).description +  "]"}
+vars['M009_'] = { 'type' : "STRING", 'value' : '[WHEN IMPAIRMENT 1ST BOTHER - YR]'}
+vars['M014_'] = { 'type' : "STRING", 'value' : '[IMPAIRMNT BEGIN  INTERFER WORK-YR]'}
+vars['M016_'] = { 'type' : "STRING", 'value' : '[HEALTH PROB PREVENT WRK-YR]'}
+vars['AARRAYSTRING'] = { 'type' : "STRING", 'value' : '[PERSON LIST]'}
 
 
+for i in range(1,30,1):
+    vars['FL_MONTH[' + str(i) + "]"] = { 'type' : "STRING", 'value' : '[MONTH][' + str(i) + "]"}
+
+vars['VAL5ST'] = {  'name' :"VAL5ST", 'type' : "STRING", 'value' : "VAL5ST" }
+vars['VAL4ST'] = {  'name' :"VAL4ST", 'type' : "STRING", 'value' : "VAL4ST" }
+vars['VAL3ST'] = {  'name' :"VAL3ST", 'type' : "STRING", 'value' : "VAL3ST" }
+vars['VAL2ST'] = {  'name' :"VAL2ST", 'type' : "STRING", 'value' : "VAL2ST" }
+vars['VAL1ST'] = {  'name' :"VAL1ST", 'type' : "STRING", 'value' : "VAL1ST" }
+
+Fills['VAL1ST'] = ["VAL1ST"]
+Fills['VAL2ST'] = ["VAL2ST"]
+Fills['VAL3ST'] = ["VAL3ST"]
+Fills['VAL4ST'] = ["VAL4ST"]
+Fills['VAL5ST'] = ["VAL5ST"]
+
+
+Fills['VAL1'] = ["VAL1"]
+Fills['VAL2'] = ["VAL2"]
+Fills['VAL3'] = ["VAL3"]
+Fills['VAL4'] = ["VAL4"]
+Fills['VAL5'] = ["VAL5"]
+Fills["PIRTAB1X081_RLOGID"] = "[2004 MAILED DOCUMENTS RESP LINK ID]"
+Fills["UNFTEXTMONTH"] = ['per month', 'per year', 'per hour']
+Fills["MONTH_STR"] = ['[START MONTH]']
+vars['VAL1'] = {  'name' :"VAL1", 'type' : "STRING", 'value' : "VAL5" }
+vars['VAL2'] = {  'name' :"VAL2", 'type' : "STRING", 'value' : "VAL4" }
+vars['VAL3'] = {  'name' :"VAL3", 'type' : "STRING", 'value' : "VAL3" }
+vars['VAL4'] = {  'name' :"VAL4", 'type' : "STRING", 'value' : "VAL2" }
+vars['VAL5'] = {  'name' :"VAL5", 'type' : "STRING", 'value' : "VAL1" }
+
+
+
+symbolTable[0]['INTEGER'] = getSymbol('TINTEGER')
 symbolTable[0]['TYESNO'] = TypeC("TYESNO", TypeDenoter(Enumerated([TypeEnumeratedItem("YES", 1, "Yes"), TypeEnumeratedItem("NO", 5, "No")])))
 evaluateSubtree(procedureTable['BASIS_FILLS'])
+for i in range(1,19):
+    #push param
+    vars["PIUNFINDEX"] = { 'type' : "INTEGER", 'value' : i}
+    #call fills
+    evaluateSubtree(procedureTable['TXTUNFTEXT'])
+
+
+
 pprint.pprint(evaluateSubtree(procedureTable['TXTTMONTH']))
 #evaluateSubtree(procedureTable['TXT_C226'])
 #evaluateSubtree(procedureTable['BC_TXT_BRONCHITIS'])
@@ -3104,7 +3262,517 @@ pprint.pprint(evaluateSubtree(procedureTable['TXTTMONTH']))
 #pprint.pprint(result[1].value)
 #pprint.pprint(evaluateSubtree(result))
 
+#    Z092IwMoV /"prev interview month": STRING Z092IwMoV
+#    Z093IwYrV /"prev interview year": STRING piRvarsZ093_IwYr_V
+#    Z093IwYrV
+
 
 
 #pprint.pprint(vars)
 
+StandardFills = {}
+NonStandardFills = {}
+
+
+for k,v in Questions.iteritems():
+
+    if not hasattr(Questions[k], 'languages') or v.languages == None:
+        continue
+
+    print k, v.languages
+
+
+    print k,v
+    o = re.findall("\^[Ff][Ll][A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?(?:\.[A-Za-z0-9_]+)?|\^[Ff][Ll][A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?",Questions[k].languages[0])
+
+    if o:
+        if not StandardFills.has_key(k):
+                StandardFills[k] = []
+
+        if isinstance(o, list):
+                for x in o:
+                    Questions[k].languages[0] = Questions[k].languages[0].replace(x, x.upper())
+                    StandardFills[k].append(x.upper())
+
+        else:
+            Questions[k].languages[0] = Questions[k].languages[0].replace(o, o.upper())
+            StandardFills[k].append(o.upper())
+
+
+    t = re.findall("\^[A-EG-Za-egz_0-9]+\[?[A-Za-z0-9_]*\]?(?:\.[A-Za-z0-9_]+)?|\^[Ff][Ll][A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?",Questions[k].languages[0])
+    if t:
+        if not NonStandardFills.has_key(k):
+                NonStandardFills[k] = []
+
+        if isinstance(t, list):
+                for x in t:
+                    Questions[k].languages[0] = Questions[k].languages[0].replace(x, x.upper())
+                    NonStandardFills[k].append(x.upper())
+        else:
+            Questions[k].languages[0] = Questions[k].languages[0].replace(t, t.upper())
+            NonStandardFills[k].append(t.upper())
+
+    print k, " ", pprint.pprint(Questions[k].languages[0])
+
+Fills['FLHWP'] = ["husband/wife/partner"]
+Fills['FLSHWP'] = ["husband/wife/partner"]
+Fills['PIFLSHWP'] = ["husband/wife/partner"]
+Fills['FLUandYOUR'.upper()] = ["you and your"]
+Fills['FLandyourHWPs'.upper()] = ["and your husband/wife/partner"]
+Fills['FLYOUR'] = [""]
+Fills['FLandyourHWP_s'.upper()] =["and your husband/wife/partner's"]
+Fills['FLoryourHWP_s'.upper()] =  ["or your husband/wife/partner's"]
+Fills['FLUorYOUR'.upper()] = ["you or your"]
+Fills['FLDoYOU'.upper()] =  ["do you"]
+Fills['FLSinceInThe'.upper()]  = ["Since PREV INTERVIEW MONTH, YEAR"]
+Fills['FLsinceinthe_1'.upper()] = ["Since PREV INTERVIEW MONTH, YEAR"]
+Fills['FLHimHer'.upper()] =  ["him/her"]
+Fills['FLHeShe'.upper()] = ["he/she"]
+Fills['FLHisHer'.upper()] = ["his/her"]
+Fills['FLHisHers'.upper()] = ["his/hers"]
+Fills['FLHimHerSelf'.upper()] = ["him/her/self"]
+Fills['FLSYSYR'] = [ str(date.today().year) ]
+Fills['FLSYSMO'] = [ str(date.today().month ) ]
+Fills['FLinlastIWMoYr'.upper()] = ["In the last INTERVIEW MONTH, YEAR"]
+Fills['FLinlastIWMoYrParen'.upper()] = ["(In the last INTERVIEW MONTH, YEAR)"]
+Fills['FLDOESSPP'] = ["Do you/Does he/she"]
+Fills['FLDoesRandSPP'.upper()] = ["Do(es) R and your husband/wife/partner"]
+Fills['FLDoesRorSPP'.upper()] =  ["Do(es) R or your husband/wife/partner"]
+Fills['FLdoRandSPP'.upper()] = ["do(es) R and your husband/wife/partner"]
+Fills['FLdoRorSPP'.upper()] =   ["do(es) R or your husband/wife/partner" ]
+Fills['FLdidRandSPP'.upper()] = ["did  R  and your husband/wife/partner"]
+Fills['FLPWMonthYearFAM'.upper()] =  [ "Since PREV INTERVIEW MONTH, YEAR OF FAM IW" ]
+Fills['FLsinceintheFAM'.upper()] = ["Since PREV INTERVIEW MONTH, YEAR OF FAM IW"]
+Fills['FLsinceinthe_1FAM'.upper()] = ["Since PREV INTERVIEW MONTH, YEAR OF FAM IW"]
+Fills['FLinlastIWMoYr'.upper()] =["In the last INTERVIEW MONTH, YEAR"]
+Fills['FLinlastIWMoYrParen'.upper()] = [ "(In the last INTERVIEW MONTH, YEAR)" ]
+Fills['FLAreSPP'.upper()] = ["Are you/Is he/she"]
+Fills['FLSelf'.upper()] = ["Self"]
+Fills['FLSPProxy'.upper()] = ["PROXY, SPOUSE IS REPORTER"]
+Fills['FLNONSPProxy'.upper()] = [ "PROXY, NON-SPOUSE IS REPORTER" ]
+Fills['flempname'.upper()] = ["CURRENT EMPLOYER"]
+Fills['FLMONTH'] = [""]
+Fills['FL_MONTH'] = [""]
+
+
+if Fills.has_key('S010'):
+    Fills['S010A'] = Fills['S010']
+
+if Fills.has_key('S004'):
+    Fills['S004A'] = Fills['S004']
+
+
+if Fills.has_key('FLC211'):
+    Fills['FLC215'] = Fills['FLC211']
+
+if Fills.has_key('PEFLS004A'):
+    Fills['FLS004A'] = Fills['PEFLS004A']
+
+if Fills.has_key('PEFLS003'):
+    Fills['FLS003'] = Fills['PEFLS003']
+
+if Fills.has_key('PEFLS003B'):
+    Fills['FLS003B'] = Fills['PEFLS003B']
+
+
+if Fills.has_key('PEFLS010A'):
+    Fills['FLS010A'] = Fills['PEFLS010A']
+
+if Fills.has_key('PEFLS037'):
+    Fills['FLS058'] = Fills['PEFLS037']
+
+if Fills.has_key('PEFLS037'):
+    Fills['FLS037'] = Fills['PEFLS037']
+
+
+if Fills.has_key('PEFLS037'):
+    Fills['FLS055'] = Fills['PEFLS037']
+
+
+if Fills.has_key('PEFLS016'):
+    Fills['FLS016'] = Fills['PEFLS016']
+
+if Fills.has_key('PEFLFORMERLATE'):
+    Fills['FLFORMERLATE'] = Fills['PEFLFORMERLATE']
+
+
+if Fills.has_key('PEFLSUBJECTHISHER'):
+    Fills['FLSUBJECTHISHER'] = Fills['PEFLSUBJECTHISHER']
+
+if Fills.has_key('PEFLINCOMETYPE'):
+    Fills['FLINCOMETYPE'] = Fills['PEFLINCOMETYPE']
+
+
+if Fills.has_key('PEFLDID'):
+    Fills['FLDID'] = Fills['PEFLDID']
+
+
+Fills["RVARS.Z092_IWMO_V"] = ["[" + "Number of times injured].[" +   getSymbol('Z092_IwMo_V'.upper()).description +  "]"]
+Fills["RVARS.Z093_IWYR_V"] = ["[" + "Number of times injured].[" +   getSymbol('Z093_Iwyr_V'.upper()).description +  "]"]
+Fills["PIRVARSZ092_IWMO_V"] = ["[" + "PREV WAVE IW MONTH" + "]" ]
+Fills["PIRVARSZ093_IWYR_V"] = ["["  "PREV WAVE IW YEAR"  + "]" ]
+Fills["PIRVARSZ091_EMPLNAME_V"] =  ["[" +   "PREV WAVE EMPLOYER NAME" + "]"]
+Fills['Z091'] = ["PREV WAVE EMPLOYER NAME"]
+Fills['FLIWER'] = [ 'If R disputes report from previous wave, probe as necessary to determine whether R has since been told by a doctor that he/she has the condition. If you wish, you may describe the situation in an F2 comment']
+Fills['FLC070'] = ['[PREVIOUS WAVE: Yes/No/Unknown]']
+Fills['PIA061TLCY_A'] = ["LAST CALENDAR YR CALCULATED"]
+Fills['RTAB'] = ["MODE CHANGE"]
+Fills['YEARLOOP'] = [ "WHICH MONTHS" ]
+Fills['STEMQUESTIONFILL'] = ['Enter all months that apply']
+vars['PIFLSHWP'] = { 'type' : "STTRING", 'value' : "husband/wife/partner" }
+
+vars['RVARS.Z092_IWMO_V'.upper()] = { 'type' : "STRING", 'value' : "[" + "Number of times injured].[" +   getSymbol('Z092_IwMo_V'.upper()).description +  "]"}
+vars['RVARS.Z093_IWYR_V'.upper()] = { 'type' : "STRING", 'value' : "[" + "Number of times injured].[" +   getSymbol('Z093_Iwyr_V'.upper()).description +  "]"}
+vars["Pisecjcurrentjobbj_j158employerinfow158_currempname".upper()] = { 'type' : "STRING", 'value' : "[" + "CURRENT EMPLOYER" +  "]"}
+
+
+
+vars['PISECLJOBHISTORYMOSTRECENTJOBL008_'] =  { 'type' : "STRING", 'value' : "[" + "PREVIOUS EMPLOYER" +  "]"}
+vars['PISECKPENSIONLOOPBK_EMPLOYERINFOW158_CURREMPNAME'] = { 'type' : "STRING", 'value' : "[" + "LAST EMPLOYER" +  "]"}
+
+def replaceFills(strn):
+        print strn
+        t = re.findall("\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?(?:\.[A-Za-z0-9_]+)?|\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?", strn)
+
+        for z in t:
+
+            rpl = z[1:].upper()
+            if vars.has_key(rpl):
+                strn = string.replace(strn, z, vars[rpl]['value'])
+            elif Fills.has_key(rpl):
+                strn = string.replace(strn, z, "/".join(Fills[rpl]))
+
+
+
+        return strn
+
+def resolveType(kv, tdf, types = None):
+
+    if types != None:
+        #print kv
+        #print types.value
+        setattr(tdf, "typeOf", types.value)
+
+    if tdf.typeOf.value == "OPEN": # type 1
+        print kv, " ", pprint.pprint(tdf.typeOf.value)
+        return { 'type' : 1,  'value' : "" }
+
+    elif hasattr(tdf.typeOf.value, "set_t") and  tdf.typeOf.value.type == "SET":     # type 4
+        print kv
+        items = []
+
+        if isinstance(tdf.typeOf.value.set_t, unicode):
+            sz = getSymbol(tdf.typeOf.value.set_t.upper())
+            return resolveType(kv, tdf, sz)
+        else:
+            for i in tdf.typeOf.value.set_t.value:
+                if isinstance(i.languages,list):
+                    items.append([i.value, replaceFills(i.languages[0])])
+                    print i.value, replaceFills(i.languages[0])
+                else:
+                    items.append([i.value, replaceFills(i.languages)])
+                    print i.value, replaceFills(i.languages)
+
+            return { 'type' : 4,  'value' : items }
+
+    elif hasattr(tdf.typeOf.value, "type") and  tdf.typeOf.value.type == "ENUMERATED": # type  4
+        print kv
+
+        items = []
+
+        for i in tdf.typeOf.value.value:
+            if isinstance(i.languages,list):
+                items.append([i.value, replaceFills(i.languages[0])])
+                print i.value, replaceFills(i.languages[0])
+
+            else:
+                items.append([i.value, replaceFills(i.languages)])
+                print i.value, replaceFills(i.languages)
+
+        return { 'type' : 4,  'value' : items }
+
+    elif hasattr(tdf.typeOf.value, "type") and tdf.typeOf.value.type == "RANGE":    # type 12
+        print "[", kv, "] RANGE", tdf.typeOf.value.lowerlimit, "..", tdf.typeOf.value.upperlimit,
+        return { 'type' : 12,  'value' : '' + str(tdf.typeOf.value.lowerlimit) + ".." + str(tdf.typeOf.value.upperlimit) }
+    elif tdf.typeOf.value == "STRING": # type 1
+        print kv, "OPEN"
+        return { 'type' : 1,  'value' : ''}
+    else:
+        if types == None:
+            sz = getSymbol(tdf.typeOf.value)
+            return resolveType(kv, tdf, sz)
+
+    return { 'type' : 0, 'value' : ''}
+
+
+listofQuestions = []
+
+
+
+for k,v in Questions.iteritems():
+
+    if Questions[k].languages == None:
+        print "Deleting: ",Questions[k]
+        continue
+
+
+    typeAns = resolveType(k, Questions[k], None)
+    #Questions[k].languages[0] = Questions[k].languages[0].replace("@/@S@>[F1]--Help@< @s@/", "")
+    #Questions[k].languages[0] = Questions[k].languages[0].replace("@S@>[F1]--Help@< @s@/", "")
+
+    t = re.findall("\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?(?:\.[A-Za-z0-9_]+)?|\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?", Questions[k].languages[0])
+
+    for z in t:
+
+        print string.replace(Questions[k].languages[0], z, z.upper())
+        Questions[k].languages[0] = string.replace(Questions[k].languages[0], z, z.upper())
+
+    #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'C. Physical Health'  ] )
+    #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'M1. Disability For Reinterviews'  ] )
+    #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'M2. Disability For Non-reinterviews'  ] )
+    #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'S. Widowhood And Divorce'  ] )
+    #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'T. Wills And Life Insurance'  ] )
+    #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'TN. Thumbnails'  ] )
+
+    #if k[0] == "W" and k[1] == "3":
+    #    listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'W. Events, Internet Use & Social Security Permission'  ] )
+
+    if k[0] == "A":
+           listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'],  'A. Coverscreen' ] )
+
+# HRS
+# study 1
+# survey 2010 72
+# module section c 1369
+
+Fills['W205A'] = Fills['W205']
+
+from g2import import insertBlaise
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'C. Physical Health' : 1369 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'M1. Disability For Reinterviews' : 1371 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'M2. Disability For Non-reinterviews' : 1372 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'S. Widowhood And Divorce' : 1373 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'T. Wills And Life Insurance' : 1374 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'TN. Thumbnails' : 1375 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'W. Events, Internet Use & Social Security Permission'  : 1376 })
+frame, validated = insertBlaise.LoadItems(listofQuestions,{  'A. Coverscreen'  : 1370 })
+## MODULE C ###
+FirstPassFills = {}
+
+
+spanishWords = "PASADO|pasado|Desde|desde|fumado|concentrarse|demencia|memoria|embarazo|primera|enfermedad|FLHESHE|FLHIMHERSELF|FIRST\sNAME\sOF\sINDIVIDUAL|FLHISHER|falleciera|fallecimiento|divorcio|beneficios|Seguro\sSocial|Ingresos|testamento|fideicomiso|NUEVO|employer|empleo|cambiado|EMPLEO|SOLICITUD|RECIBIR|documento|participante|entrevistador|Participante|estampilla|elegibles|hecha|veces|Nunca|nunca|formulario|tiempo|firme"
+
+for k, v in StandardFills.iteritems():
+
+    for ff in v:
+        xtr = Fills[ff[1:]]
+
+        if not FirstPassFills.has_key(ff[1:]):
+            FirstPassFills[ff[1:]] = []
+        else:
+            continue
+
+        print ff
+        num = 0
+        for cc in xtr:
+            if not hasattr(cc,"type"):
+                try:
+                    cc.decode('ascii')
+
+                    if re.search(spanishWords, cc):
+                        continue
+
+                    FirstPassFills[ff[1:]].append(cc)
+                except Exception, e:
+                    print e
+            else:
+                if cc.type == 'IDENTIFIER':
+                    tz = Fills[cc.name][0]
+
+                    try:
+                        tz['value'].decode('ascii')
+
+                        if re.search(spanishWords, tz['value']):
+                            continue
+                        FirstPassFills[ff[1:]].append(tz['value'])
+                    except Exception, e:
+                        print e
+
+                else:
+                    tz = evaluateSubtree(cc)
+
+                    print type(tz['value'])
+
+                    try:
+
+
+                        tz['value'].decode('ascii')
+                        if re.search(spanishWords, tz['value']):
+                            continue
+
+                        FirstPassFills[ff[1:]].append(tz['value'])
+                    except Exception, e:
+                        print e
+
+
+for k, v in NonStandardFills.iteritems():
+
+    for ff in v:
+        xtr = Fills[ff[1:]]
+
+        if not FirstPassFills.has_key(ff[1:]):
+            FirstPassFills[ff[1:]] = []
+        else:
+            continue
+
+        print ff
+        num = 0
+        for cc in xtr:
+            if not hasattr(cc,"type"):
+                try:
+                    cc.decode('ascii')
+
+                    if re.search(spanishWords, cc):
+                        continue
+
+                    FirstPassFills[ff[1:]].append(cc)
+                except Exception, e:
+                    print e
+            else:
+                if cc.type == 'IDENTIFIER':
+                    tz = Fills[cc.name][0]
+
+                    try:
+                        tz['value'].decode('ascii')
+
+                        if re.search(spanishWords, tz['value']):
+                            continue
+                        FirstPassFills[ff[1:]].append(tz['value'])
+                    except Exception, e:
+                        print e
+
+                else:
+                    tz = evaluateSubtree(cc)
+
+                    print type(tz['value'])
+
+                    try:
+
+
+                        tz['value'].decode('ascii')
+                        if re.search(spanishWords, tz['value']):
+                            continue
+
+                        FirstPassFills[ff[1:]].append(tz['value'])
+                    except Exception, e:
+                        print e
+
+
+
+finalFills = []
+
+for k, v in FirstPassFills.iteritems():
+    FirstPassFills[k] = list(set(FirstPassFills[k]))
+    for z in FirstPassFills[k]:
+        t = re.findall("\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?(?:\.[A-Za-z0-9_]+)?|\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?", z, re.UNICODE)
+
+        if len(t) > 0:
+            for c in t:
+                if not FirstPassFills.has_key(c[1:]):
+                    finalFills.append(c)
+
+finalFills = list(set(finalFills))
+
+
+
+
+
+for ff in finalFills:
+    xtr = Fills[ff[1:]]
+
+    if not FirstPassFills.has_key(ff[1:]):
+        FirstPassFills[ff[1:]] = []
+
+
+    print xtr
+    for cc in xtr:
+
+        if not hasattr(cc,"type"):
+            try:
+                cc.decode('ascii')
+
+                if re.search(spanishWords, cc):
+                    continue
+
+                FirstPassFills[ff[1:]].append(cc)
+            except Exception, e:
+                print e
+        else:
+            if cc.type == 'IDENTIFIER':
+                tz = Fills[cc.name][0]
+
+                try:
+                    tz['value'].decode('ascii')
+
+                    if re.search(spanishWords, tz['value']):
+                        continue
+                    FirstPassFills[ff[1:]].append(tz['value'])
+                except Exception, e:
+                    print e
+
+            else:
+                tz = evaluateSubtree(cc)
+
+                print type(tz['value'])
+
+                try:
+
+
+                    tz['value'].decode('ascii')
+                    if re.search(spanishWords, tz['value']):
+                        continue
+
+                    FirstPassFills[ff[1:]].append(tz['value'])
+                except Exception, e:
+                    print e
+
+
+
+def replaceFinalFills(k, strn):
+
+        finald = strn
+
+
+        if isinstance(finald,list):
+
+
+            for d in finald:
+                t = re.findall("\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?(?:\.[A-Za-z0-9_]+)?|\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?", d)
+
+                for z in t:
+                    if isinstance(FirstPassFills[z[1:]],list):
+                        finald = d.replace(z,"/".join(FirstPassFills[z[1:]]))
+                    else:
+                        finald = d.replace(z, FirstPassFills[z[1:]])
+
+        else:
+            t = re.findall("\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?(?:\.[A-Za-z0-9_]+)?|\^[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]?", finald)
+
+            for z in t:
+
+                if isinstance(FirstPassFills[z[1:]],list):
+                    finald = strn.replace(z,"/".join(FirstPassFills[z[1:]]))
+                else:
+                    finald = strn.replace(z, FirstPassFills[z[1:]])
+
+
+
+        FirstPassFills[k] = finald
+        return FirstPassFills[k]
+
+for k, v in FirstPassFills.iteritems():
+    FirstPassFills[k] = list(set(FirstPassFills[k]))
+    FirstPassFills[k] = replaceFinalFills(k, FirstPassFills[k])
+
+
+insertBlaise.LoadFills(FirstPassFills, 72)
