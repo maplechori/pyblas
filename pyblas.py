@@ -22,9 +22,11 @@ vars = {
                 "CORSPN" : { 'name' :"CORSPN", 'type' : "INTEGER", 'value' : 2},
                 "PRXENG" : { 'name' :"PRXENG", 'type' : "INTEGER", 'value' : 3},
                 "PRXSPN" : { 'name' :"PRXSPN", 'type' : "INTEGER", 'value' : 4},
-                "EXTENG" : { 'name' :"EXTENG", 'type' : "INTEGER", 'value' : 5},
-                "EXTSPN" : { 'name' :"EXTSPN",'type' : "INTEGER", 'value' : 6},
-                "MEDIA" : { 'name' :"MEDIA", 'type' : "INTEGER", 'value' : 7},
+                "SPPENG" : { 'name' :"SPPENG", 'type' : "INTEGER", 'value' : 5},
+                "SPPSPN" : { 'name' :"SPPSPN",'type' : "INTEGER", 'value' : 6},
+                "EXTENG" : { 'name' :"EXTENG", 'type' : "INTEGER", 'value' : 7},
+                "EXTSPN" : { 'name' :"EXTSPN",'type' : "INTEGER", 'value' : 8},
+                "MEDIA" : { 'name' :"MEDIA", 'type' : "INTEGER", 'value' : 9},
                 "TYPEACONSISTENT" : { 'name' :"TYPEACONSISTENT", 'type' : "INTEGER", 'value' : 1},
                 "TYPEBCONSISTENT" : { 'name' :"TYPEBCONSISTENT", 'type' : "INTEGER", 'value' : 2},
                 "CASHBALANCE" : { 'name' :"CASHBALANCE", 'type' : "INTEGER", 'value' : 3},
@@ -50,10 +52,10 @@ def include_file(fname):
         return fl.read()
 
 
-data6 = include_file("basis2.txt")
-data4 = include_file("hrs_fills_init2.txt")
-data = include_file("hrs_typ3.txt")
-data2 = include_file("proc2.txt")
+data6 = include_file("hrs_basis.inc")
+data4 = include_file("hrs_fills_init.inc")
+data = include_file("hrs_typ.inc")
+data2 = include_file("hrs_proc.inc")
 
 
 # data3 = include_file("hrs_c4.txt")
@@ -92,8 +94,8 @@ data2 = include_file("proc2.txt")
 #data3  += include_file("hrs10_v.inc")
 #data3  = include_file("hrs10_y1.inc")
 
-data3  = include_file("hrs10_v_physmeasintro.inc")
-data3  += include_file("hrs10_v_physicalmeasures.inc")
+#data3  = include_file("hrs10_v_physmeasintro.inc")
+#data3  += include_file("hrs10_v_physicalmeasures.inc")
 
 #data3 = include_file("hrs10_w.inc")
 #data3 += include_file("hrs10_w1.inc")
@@ -110,7 +112,9 @@ data3  += include_file("hrs10_v_physicalmeasures.inc")
 
 
 
-data = data6 + data4 + data + data2 + data3
+data = data6 + data4 + data + data2
+
+
 
 #data =  data3
 
@@ -341,6 +345,7 @@ reserved = {
 'SUBSTRING'  : 'SUBSTRING',
 'RANDOM' : 'RANDOM',
 'SYSDATE' : 'SYSDATE',
+'FRAC' :  'FRAC',
 'POSITION' : 'POSITION',
 "LAYOUT" : "LAYOUT",
 "FROM" : "FROM",
@@ -400,10 +405,10 @@ def t_TYPE(t):
     return t
 
 def t_MONTH(t):
-    r'[M][O][N][T][H]'
+    r'[Mm][Oo][Nn][Tt][Hh](?=\(|\s)'
     t.type = "MONTH"
     t.value = "MONTH"
-
+    print "MONTH: " + str(state_in_types) + "****************"
     global state_in_types
     if state_in_types == 1:
         t.value = "IDENTIFIER"
@@ -411,10 +416,11 @@ def t_MONTH(t):
     return t
 
 def t_YEAR(t):
-    r'[Y][E][A][R]'
+    r'[Yy][Ee][Aa][Rr](?=\(|\s)'
     t.type = "YEAR"
     t.value = "YEAR"
     global state_in_types
+    print "YEAR: " + str(state_in_types) + "****************"
     if state_in_types == 1:
         t.value = "IDENTIFIER"
         t.type = "IDENTIFIER"
@@ -669,7 +675,7 @@ lexer.input(data)
 #else:
 #pass
 # print repr(tok.value)
-#  print tok
+  #print tok
 
 
 precedence = (
@@ -1175,7 +1181,9 @@ def p_enumerated_type(p):
 
 def p_enum_languages_list(p):
     r'''
-        enum_languages_list :  enum_languages_list LITERAL
+        enum_languages_list : enum_languages_list IDENTIFIER LITERAL
+                            | enum_languages_list LITERAL
+                            | IDENTIFIER LITERAL
                             | LITERAL
 
     '''
@@ -1807,9 +1815,12 @@ def p_tag_rule(p):
 
 def p_fields_declaration(p):
     '''
-    fields_declaration : identifier_list tag_rule enum_languages_list field_description COLON type_denoter
-                       | identifier_list tag_rule enum_languages_list COLON type_denoter
+    fields_declaration : identifier_list tag_rule enum_languages_list field_description COLON type_denoter COMMA tmodifiers_list
+                       | identifier_list tag_rule enum_languages_list field_description COLON type_denoter
+                       | identifier_list field_description COLON type_denoter COMMA tmodifiers_list
                        | identifier_list field_description COLON type_denoter
+                       | identifier_list tag_rule enum_languages_list COLON type_denoter COMMA tmodifiers_list
+                       | identifier_list tag_rule enum_languages_list COLON type_denoter
                        | identifier_list COLON type_denoter COMMA tmodifiers_list
                        | identifier_list COLON type_denoter
                        | identifier_list TAG enum_languages_list field_description COLON type_denoter COMMA tmodifiers_list
@@ -1860,9 +1871,6 @@ def p_fields_declaration(p):
             f = Field(Identifier(p[1]), p[2], p[3], p[4], p[6])
             p[0] = f
 
-        #symbolTable[levelScope][str(p[1]).upper()] = f
-
- #       vars[str(p[0].name)] = p[0]
 
 
 def p_parameters_declaration_part(p):
@@ -1883,6 +1891,7 @@ def p_parameters_declaration_part(p):
 def p_statement_part(p):
     r'''
         statement_part : statement_list
+
     '''
 
     p[0] = p[1]
@@ -2163,6 +2172,7 @@ def p_built_in_functions(p):
                                | MONTH
                                | VAL
                                | TODATE
+                               | FRAC
 
 
     '''
@@ -2175,7 +2185,6 @@ def p_primary(p):
                 | set_constructor
                 | COUNT
                 | FLOAT
-                | SYSDATE
                 | LPAREN index_expression_list RPAREN
                 | built_in_functions LPAREN index_expression_list RPAREN
     '''
@@ -2269,6 +2278,7 @@ def p_variable_access(p):
             variable_access : IDENTIFIER
                             | indexed_variable
                             | field_designator
+                            | SYSDATE
 
 
     '''
@@ -2627,8 +2637,16 @@ def p_not_statement(p):
 def p_if_statement(p):
     r'''
         if_statement :    IF boolean_expression THEN statement_list elif_statements else_statement_list ENDIF
+                    |     IF boolean_expression THEN  elif_statements else_statement_list ENDIF
+
 '''
-    p[0] = IfElseStatement(p[2],p[4], p[5],p[6])
+
+    if len(p.slice) > 6:
+        p[0] = IfElseStatement(p[2],p[4], p[5],p[6])
+    else:
+        p[0] = IfElseStatement(p[2],None, p[4],p[5])
+
+
 
 
 def p_elif_statements(p):
@@ -2644,6 +2662,7 @@ def p_else_statement_list(p):
     r'''
         else_statement_list :
                             | ELSE statement_list
+                            | ELSE
             '''
 
     if len(p.slice) > 2 and p[2] != None:
@@ -3796,12 +3815,12 @@ for k,v in Questions.iteritems():
    #     else:
     #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'Y. Time Calculations'  ] )
 
-    if k[0] == "V" or k[0] == "I":
+    #if k[0] == "V" or k[0] == "I":
 
-        if not desc:
-            listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'I. Physical Measures'  ] )
-        else:
-            listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'I. Physical Measures'  ] )
+     #   if not desc:
+      #      listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'I. Physical Measures'  ] )
+      #  else:
+      #      listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'I. Physical Measures'  ] )
 
 
   #  if k[0] == "V" or k[0] == "W":
@@ -3855,7 +3874,7 @@ from g2import import insertBlaise
 #frame, validated = insertBlaise.LoadItems(listofQuestions,{  'R. Asset Reconciliation' : 1439 }) # really was 1382 / 1402
 #frame, validated = insertBlaise.LoadItems(listofQuestions,{  'V. Modules' : 1440 }) # really was 1382 / 1402
 #frame, validated = insertBlaise.LoadItems(listofQuestions,{  'Y. Time Calculations' : 1441 }) # really was 1382 / 1402
-frame, validated = insertBlaise.LoadItems(listofQuestions,{  'I. Physical Measures' : 1442 }) # really was 1382 / 1402
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'I. Physical Measures' : 1442 }) # really was 1382 / 1402
 #frame, validated = insertBlaise.LoadItems(listofQuestions,{  'PE. PENSION' : 1443 }) # really was 1382 / 1402
 FirstPassFills = {}
 
@@ -4071,4 +4090,4 @@ for k, v in FirstPassFills.iteritems():
     FirstPassFills[k] = replaceFinalFills(k, FirstPassFills[k])
 
 
-insertBlaise.LoadFills(FirstPassFills, 72)
+#insertBlaise.LoadFills(FirstPassFills, 72)
