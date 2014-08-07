@@ -78,24 +78,26 @@ data2 = include_file("hrs_proc.inc")
 #data3  = include_file("hrs10_p.inc")
 #data3  = include_file("hrs10_q.inc")
 #data3  = include_file("hrs10_r.inc")
-#data3  = include_file("hrs10_u.inc")
+data3  = include_file("hrs12_u.inc")
 
 
-#data3  = include_file("hrs10_v1.inc")
-#data3  += include_file("hrs10_v2.inc")
-#data3  += include_file("hrs10_v3.inc")
-#data3  += include_file("hrs10_v4.inc")
-#data3  += include_file("hrs10_v5.inc")
-#data3  += include_file("hrs10_v6.inc")
-#data3  += include_file("hrs10_v7.inc")
-#data3  += include_file("hrs10_v8.inc")
-#data3  += include_file("hrs10_v9.inc")
-#data3  += include_file("hrs10_v10.inc")
-#data3  += include_file("hrs10_v.inc")
+#data3  = include_file("hrs12_v1.inc")
+#data3  += include_file("hrs12_v2.inc")
+#data3  += include_file("hrs12_v3.inc")
+#data3  += include_file("hrs12_v4.inc")
+#data3  += include_file("hrs12_v5.inc")
+#data3  += include_file("hrs12_v6.inc")
+#data3  += include_file("hrs12_v7.inc")
+#data3  += include_file("hrs12_v8.inc")
+#data3  += include_file("hrs12_v9.inc")
+#data3  += include_file("hrs12_v10.inc")
+#data3  += include_file("hrs12_v.inc")
+
+
 #data3  = include_file("hrs10_y1.inc")
 
-#data3  = include_file("hrs10_v_physmeasintro.inc")
-#data3  += include_file("hrs10_v_physicalmeasures.inc")
+#data3  = include_file("hrs12_v_physmeasintro.inc")
+#data3  += include_file("hrs12_v_physicalmeasures.inc")
 
 #data3 = include_file("hrs10_w.inc")
 #data3 += include_file("hrs10_w1.inc")
@@ -112,7 +114,7 @@ data2 = include_file("hrs_proc.inc")
 
 
 
-data = data6 + data4 + data + data2
+data = data6 + data4 + data + data2 + data3
 
 
 
@@ -283,10 +285,13 @@ tokens = [
     "RESERVECHECK",
     "INSERT",
     "NONRESPONSE",
+    "NEWPAGE",
+
 
     ]
 
 reserved = {
+'BEFORE' : 'BEFORE',
 'PROCEDURE' : 'PROCEDURE',
 'CHECK' : 'CHECK',
 'IF' : 'IF' ,
@@ -320,6 +325,8 @@ reserved = {
 'NORF' : 'NORF',
 'NODK' : 'NODK',
 'DK' : 'DK',
+'AT' : 'AT',
+'BLOCKSTART' : 'BLOCKSTART',
 'SET' : 'SET',
 'ARRAY' : 'ARRAY',
 'OF' : 'OF',
@@ -359,9 +366,6 @@ tokens += list(reserved.values())
 
 t_ignore = " \t\r"
 
-def t_newpage(t):
-    '[Nn][Ee][Ww][Pp][Aa][Gg][Ee]'
-    pass
 
 
 
@@ -403,6 +407,11 @@ def t_TYPE(t):
     state_in_types  = 1
     t.type = "TYPE"
     return t
+
+def t_NEWPAGE(t):
+    r'[Nn][Ee][Ww][Pp][Aa][Gg][Ee]'
+    return t
+
 
 def t_MONTH(t):
     r'[Mm][Oo][Nn][Tt][Hh](?=\(|\s)'
@@ -504,7 +513,7 @@ def t_fillcode_error(t):
 
 
 def t_TAG(t):
-    r"\([A-Z][0-9]+[\.A-Z0-9]*[_]?\)|\([a-zA-Z]+[_][A-Z]+[_]?[A-Z]*\)|\(GENDER\)|(\(Seq[0-9]P+[\.A-Z0-9]*[_]?[n]?[0-9]?[0-9]?\))"
+    r"\([A-Za-z][0-9]+[\.a-zA-Z0-9]*[_]?\)|\([a-zA-Z]+[_][A-Z]+[_]?[A-Z]*\)|\(GENDER\)|(\(Seq[0-9]P+[\.a-zA-Z0-9]*[_]?[n]?[0-9]?[0-9]?\))"
     #print t.value
     return t
 
@@ -773,7 +782,7 @@ class Field(Expr):
 
             if re.findall("_", str(name.name)):
                 try:
-                    if str(name.name).index("_") == len(name.name) - 1:
+                    if str(name.name).index("_"):
                         QName = str(name.name[:str(name.name).index("_")])
                     else:
                         QName = str(name.name)
@@ -789,6 +798,16 @@ class Field(Expr):
                    QName = QName[:len(QName)-1] + QName[len(QName)-1:].replace("A", "")
                 if QName != "" and QName[len(QName)-1] == "T":
                    QName = QName[:len(QName)-1] + QName[len(QName)-1:].replace("T", "")
+
+            if QName != "":
+
+                Questions["N" + QName] = self
+
+
+                if Fills.has_key(QName):
+                    Fills[QName].append(description)
+                else:
+                    Fills[QName] = [ description ]
 
 
 
@@ -810,19 +829,10 @@ class Field(Expr):
                     tag = tag[:len(tag)-1] + tag[len(tag)-1:].replace("T", "")
 
                 if Questions.has_key(tag):
-                    Questions[QName] = self
+                    Questions["N" + QName] = self
                 else:
                     Questions[tag] = self
 
-            elif QName != "":
-
-                Questions[QName] = self
-
-
-                if Fills.has_key(QName):
-                    Fills[QName].append(description)
-                else:
-                    Fills[QName] = [ description ]
 
             else:
                 print self.name
@@ -839,7 +849,6 @@ class Field(Expr):
         obj = cls.__new__(cls)
         obj.__dict__.update(attributes)
         return obj
-
 
 
 class BinOp(Expr):
@@ -997,29 +1006,54 @@ class SetIn(Expr):
 def p_block_declaration(p):
     r'''
         block_declaration : block_identification new_scope procedure_block ENDBLOCK
+                          | block_identification LITERAL new_scope procedure_block ENDBLOCK
                           | block_identification new_scope procedure_block ENDTABLE
+                          | block_identification LITERAL new_scope procedure_block ENDTABLE
     '''
     global symbolTable, levelScope
 
     items = []
     symbolTable[levelScope][p[1].upper()] = {}
 
-    for i in p[3]:
-        if hasattr(i, 'type') and (i.type == "TYPEDENOTER" or i.type == "TYPE" or i.type == "TYPELOCAL" or i.type == "FIELD" or i.type == "PARAMETER" or i.type == "TYPEDEF" or i.type == "AUXFIELDS"):
+    if p.slice[3].type == "procedure_block":
+        for i in p[3]:
+            if hasattr(i, 'type') and (i.type == "TYPEDENOTER" or i.type == "TYPE" or i.type == "TYPELOCAL" or i.type == "FIELD" or i.type == "PARAMETER" or i.type == "TYPEDEF" or i.type == "AUXFIELDS"):
 
-                if hasattr(i,"name") and isinstance(i.name,list):
-                    for j in i.name:
-                            x = i
-                            x.name = j.name
-                            symbolTable[levelScope][p[1].upper()][j.name] = x
-                else:
-                    if i.type == "FIELD" or i.type == "PARAMETER":
-                        symbolTable[levelScope][p[1].upper()][i.name.name] = i
-                    elif i.type != "TYPEDEF":
-                        symbolTable[levelScope][p[1].upper()][i.name] = i
+                    if hasattr(i,"name") and isinstance(i.name,list):
+                        for j in i.name:
+                                x = i
+                                x.name = j.name
+                                symbolTable[levelScope][p[1].upper()][j.name] = x
+                    else:
+                        if i.type == "FIELD" or i.type == "PARAMETER":
+                            symbolTable[levelScope][p[1].upper()][i.name.name] = i
+                        elif i.type != "TYPEDEF":
+                            symbolTable[levelScope][p[1].upper()][i.name] = i
 
-    blockTable[p[1].upper()] = p[3]
-    p[0] = Block(p[1].upper(), p[3])
+        blockTable[p[1].upper()] = p[3]
+        p[0] = Block(p[1].upper(), p[3])
+
+
+    elif p.slice[4].type == "procedure_block":
+
+        for i in p[4]:
+            if hasattr(i, 'type') and (i.type == "TYPEDENOTER" or i.type == "TYPE" or i.type == "TYPELOCAL" or i.type == "FIELD" or i.type == "PARAMETER" or i.type == "TYPEDEF" or i.type == "AUXFIELDS"):
+
+                    if hasattr(i,"name") and isinstance(i.name,list):
+                        for j in i.name:
+                                x = i
+                                x.name = j.name
+                                symbolTable[levelScope][p[1].upper()][j.name] = x
+                    else:
+                        if i.type == "FIELD" or i.type == "PARAMETER":
+                            symbolTable[levelScope][p[1].upper()][i.name.name] = i
+                        elif i.type != "TYPEDEF":
+                            symbolTable[levelScope][p[1].upper()][i.name] = i
+
+        blockTable[p[1].upper()] = p[4]
+        p[0] = Block(p[1].upper(), p[4])
+
+
     pop_scope()
 
 
@@ -1189,21 +1223,35 @@ def p_enum_languages_list(p):
     '''
 
     items = []
-    if len(p) > 2:
+    if len(p.slice) == 4:
+        if p[1] != None and isinstance(p[1], list):
+            for i in p[1]:
+                items.append(i)
+
+            items.append(p[3])
+            p[0] = items
+        elif p[1] != None:
+             p[0] = [p[1],p[3]]
+        else:
+            p[0] = p[3]
+
+    elif len(p.slice) == 3:
         if p[1] != None and isinstance(p[1], list):
             for i in p[1]:
                 items.append(i)
 
             items.append(p[2])
             p[0] = items
-        elif p[1] != None:
+        elif p[1] != None and p.slice[1].type != 'IDENTIFIER':
              p[0] = [p[1],p[2]]
         else:
-            p[0] = p[2]
+            p[0] = [p[2]]
 
+    elif len(p.slice) == 2:
+        p[0] = [p[1]]
 
-    else:
-        p[0] = p[1]
+    #pprint.pprint(p.slice)
+    #pprint.pprint(p[0])
 
 
 def p_enum_num_arg(p):
@@ -1445,8 +1493,6 @@ def p_identifier_list(p):
                 p[0] = [p[1],p[3]]
             else:
                 p[0] = p[1]
-
-
        else:
 
             p[0] = p[3]
@@ -1579,9 +1625,6 @@ def p_type_definition(p):
 def p_type_definition_part(p):
     r'''
                 type_definition_part : TYPE type_definition_list
-
-
-
     '''
 
     if len(p) > 1:
@@ -1825,6 +1868,9 @@ def p_fields_declaration(p):
                        | identifier_list COLON type_denoter
                        | identifier_list TAG enum_languages_list field_description COLON type_denoter COMMA tmodifiers_list
                        | identifier_list TAG enum_languages_list field_description COLON type_denoter
+                       | identifier_list TAG field_description COLON type_denoter
+                       | identifier_list TAG enum_languages_list COLON type_denoter
+                       | identifier_list TAG enum_languages_list COLON type_denoter COMMA tmodifiers_list
 
     '''
 
@@ -1843,6 +1889,9 @@ def p_fields_declaration(p):
             items.append(f)
         elif p.slice[2].type == 'field_description':
             f = Field(p[1],None,None, p[2],p[4])
+            items.append(f)
+        elif p.slice[3].type == 'field_description':
+            f = Field(p[1],None,None, p[3],p[5])
             items.append(f)
         elif p.slice[5].type == 'type_denoter':
             f = Field(p[1],p[2],p[3],None,p[5])
@@ -2470,6 +2519,7 @@ def p_statement(p):
                     | signal_statement
                     | not_statement
                     | layout_statement
+                    | newpage_statement
 
     '''
     p[0] =  p[1]
@@ -2575,15 +2625,36 @@ class LayoutStatement(Expr):
 
 
     def __repr__(self):
-            return "LAYOUT STATEMENT %s %s %s" % (self.left, self.right, self.literal)
+            return ("LAYOUT STATEMENT %s %s %s" % (self.left, self.right, self.literal)).encode('ascii','ignore')
 
+
+def p_before_list(p):
+    r'''
+        before_list : before_list before
+                    | before
+
+    '''
+
+def p_before(p):
+    r'''
+        before : BEFORE IDENTIFIER newpage_statement
+    '''
+
+def p_newpage_statement(p):
+    r'''
+        newpage_statement : NEWPAGE
+    '''
 
 def p_layout_statement(p):
     r'''
         layout_statement : LAYOUT FROM IDENTIFIER TO IDENTIFIER FIELDPANE IDENTIFIER
-    '''
+                        |  LAYOUT AT BLOCKSTART newpage_statement before_list
+                        |  LAYOUT AT BLOCKSTART newpage_statement
+                        |  LAYOUT before_list
 
-    p[0] = LayoutStatement(p[3],p[5], p[7])
+    '''
+    if len(p.slice) > 6:
+        p[0] = LayoutStatement(p[3],p[5], p[7])
 
 class SignalStatement(Expr):
     def __init__(self,left, right = None, literal = None):
@@ -2594,15 +2665,19 @@ class SignalStatement(Expr):
 
 
     def __repr__(self):
-        return "SIGNAL STATEMENT %s %s %s" % (self.left, self.right, self.literal)
+        return ("SIGNAL STATEMENT %s %s %s" % (self.left, self.right, self.literal)).encode('ascii','ignore')
 
 
 def p_signal_statement(p):
     '''
         signal_statement : SIGNAL boolean_expression involving_vars LITERAL
+                         | SIGNAL boolean_expression
     '''
 
-    p[0] = SignalStatement(p[2], p[3],p[4])
+    if len(p.slice) > 3:
+        p[0] = SignalStatement(p[2], p[3],p[4])
+    else:
+        p[0] = SignalStatement(p[2], None, None)
 
 
 
@@ -3139,6 +3214,10 @@ if Fills.has_key("Seq8P"):
     Fills["P173_"] = Fills["Seq8P"][1]
     Fills["P028_"] =  Fills["Seq8P_22"][1]
 
+
+Fills["FLPREVWAVE"] = [u"[PREVIOUS WAVE]"]
+Fills["FLCURWAVE"] = [u"[CURRENT WAVE]"]
+
 if Fills.has_key("FLW043_1"):
     Fills["PIW049"]  = Fills["FLW043_1"]
     Fills["FLTHISTHESE"] = Fills["PETHISTHESE"]
@@ -3334,6 +3413,8 @@ vars['VAL5'] = {  'name' :"VAL5", 'type' : "STRING", 'value' : "VAL1" }
 Fills["SecI.V932_BookletID".upper()] = [u"BOOKLET ID"]
 Fills["V939_BookletBarCodeID".upper()] = [u"BARCODE ID"]
 
+symbolTable[0]['TIME'] = TypeC("TIMETYPE", TypeDenoter(String("TIME")))
+symbolTable[0]['DATE'] = TypeC("DATETYPE", TypeDenoter(String("DATE")))
 symbolTable[0]['TIMETYPE'] = TypeC("TIMETYPE", TypeDenoter(String("TIME")))
 symbolTable[0]['DATETYPE'] = TypeC("DATETYPE", TypeDenoter(String("DATE")))
 symbolTable[0]['INTEGER'] = getSymbol('TINTEGER')
@@ -3396,7 +3477,8 @@ vars["FLHWP"] = { "type" : "STRING", "value" : "husband/wife/partner"}
 Fills['FLSHWP'] = ["husband/wife/partner"]
 Fills['PIFLSHWP'] = ["husband/wife/partner"]
 Fills['FLUandYOUR'.upper()] = ["you and your"]
-Fills['FLandyourHWPs'.upper()] = ["and your husband/wife/partner"]
+Fills['FLandyourHWP'.upper()] = [u"and your husband/wife/partner"]
+Fills['FLandyourHWPs'.upper()] = [u"and your husband/wife/partner"]
 Fills['FLYOUR'] = [""]
 Fills['FLandyourHWP_s'.upper()] =["and your husband/wife/partner's"]
 Fills['FLoryourHWP_s'.upper()] =  ["or your husband/wife/partner's"]
@@ -3644,6 +3726,8 @@ def resolveType(kv, tdf, types = None):
     else:
         if types == None:
             sz = getSymbol(tdf.typeOf.value)
+            if sz == None:
+                return { 'type' : 0, 'value' : ''}
             return resolveType(kv, tdf, sz)
 
     return { 'type' : 0, 'value' : ''}
@@ -3790,21 +3874,21 @@ for k,v in Questions.iteritems():
     #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'R. Asset change'  ] )
 
 
-    #if k[0] == "U":
-#
- #       if not desc:
-  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'R. Asset Reconciliation'  ] )
-   #     else:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'R. Asset Reconciliation'  ] )
+    if k[1] == "U":
+
+        if not desc:
+            listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'U. Asset Reconciliation'  ] )
+        else:
+            listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'U. Asset Reconciliation'  ] )
 
 
 
-    #if k[0] == "V":
-#
- #       if not desc:
-  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'V. Modules'  ] )
-   #     else:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'V. Modules'  ] )
+    if k[1] == "V":
+
+        if not desc:
+            listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'V. Modules'  ] )
+        else:
+            listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'V. Modules'  ] )
 
 
 
@@ -3815,12 +3899,12 @@ for k,v in Questions.iteritems():
    #     else:
     #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'Y. Time Calculations'  ] )
 
-    #if k[0] == "V" or k[0] == "I":
+    #if k[1] == "V" or k[1] == "I":
 
      #   if not desc:
-      #      listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'I. Physical Measures'  ] )
-      #  else:
-      #      listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'I. Physical Measures'  ] )
+     #       listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'I. Physical Measures'  ] )
+     #   else:
+     #       listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'I. Physical Measures'  ] )
 
 
   #  if k[0] == "V" or k[0] == "W":
@@ -3871,11 +3955,14 @@ from g2import import insertBlaise
 #frame, validated = insertBlaise.LoadItems(listofQuestions,{  'P. Expectations' : 1436 }) # really was 1382 / 1402
 #frame, validated = insertBlaise.LoadItems(listofQuestions,{  'Q. Assets and Income' : 1437 }) # really was 1382 / 1402
 #frame, validated = insertBlaise.LoadItems(listofQuestions,{  'R. Asset change' : 1438 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'R. Asset Reconciliation' : 1439 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'V. Modules' : 1440 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'Y. Time Calculations' : 1441 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'I. Physical Measures' : 1442 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'PE. PENSION' : 1443 }) # really was 1382 / 1402
+frame, validated = insertBlaise.LoadItems(listofQuestions,{  'U. Asset Reconciliation' : 1446 }) # really was 1382 / 1402
+
+
+
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'V. Modules' : 1445 }) # really was 1382 / 1402
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'Y. Time Calculations' :  }) # really was 1382 / 1402
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'I. Physical Measures' : 1444 }) # really was 1382 / 1402
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'PE. PENSION' :  }) # really was 1382 / 1402
 FirstPassFills = {}
 
 
@@ -3890,7 +3977,7 @@ for k, v in StandardFills.iteritems():
 
         if not Fills.has_key(ff[1:]):
 
-            res = re.findall("[X|Z][0-9]+_?[0-9A-Z_]*", ff[1:])
+            res = re.findall("[X|Z][0-9]+(?=_?[0-9A-Z_]*)", ff[1:])
 
             if res and (Fills.has_key(res[0])):
 
@@ -4043,8 +4130,13 @@ def replaceFinalFills(k, strn):
             for d in finald:
                 t = re.findall("\^[A-Za-z_0-9]+\[?[A-Z0-9_]*\]?(?:\.[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]+)?(?:\.?[A-Za-z0-9_]+)?", d)
 
+                print t
                 for z in t:
-                    print z
+                    print z[1:]
+
+                    if not FirstPassFills.has_key(z[1:]):
+                        FirstPassFills[z[1:]] = []
+
                     if isinstance(FirstPassFills[z[1:]],list):
                         print finald[counter]
 
@@ -4090,4 +4182,4 @@ for k, v in FirstPassFills.iteritems():
     FirstPassFills[k] = replaceFinalFills(k, FirstPassFills[k])
 
 
-#insertBlaise.LoadFills(FirstPassFills, 72)
+insertBlaise.LoadFills(FirstPassFills, 77)
