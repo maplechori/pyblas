@@ -58,28 +58,42 @@ data = include_file("hrs_typ.inc")
 data2 = include_file("hrs_proc.inc")
 
 
-# data3 = include_file("hrs_c4.txt")
-# data3 = include_file("hrs10_m1.inc")
-# data3 = include_file("hrs10_m2.inc")
-# data3 = include_file("hrs10_s.inc")
-# data3 = include_file("hrs10_t.inc")
-#data3 = include_file("hrs10_tn.inc")
-#data3 = include_file("hrs_a.txt")
-#data3 = include_file("hrs10_b.inc")
-#data3 = include_file("hrs10_d.inc")
-#data3 = include_file("hrs10_e.inc")
-#data3 = include_file("hrs10_f.inc")
-#data3  = include_file("hrs10_g.inc")
-#data3  = include_file("hrs10_h.inc")
-#data3  = include_file("hrs10_j.inc")
-#data3  = include_file("hrs10_k.inc")
-#data3  = include_file("hrs10_l.inc")
-#data3  = include_file("hrs10_n.inc")
-#data3  = include_file("hrs10_p.inc")
-#data3  = include_file("hrs10_q.inc")
-#data3  = include_file("hrs10_r.inc")
-data3  = include_file("hrs12_u.inc")
 
+
+
+
+
+#data3 = include_file("hrs12_tn.inc")
+
+#data3 = include_file("hrs12_s.inc")
+
+#data3 = include_file("hrs12_t.inc")
+
+#data3 = include_file("hrs12_m2.inc")
+#data3 = include_file("hrs12_m1.inc")
+#data3 = include_file("hrs12_b.inc")
+
+#data3 = include_file("hrs12_c.inc")
+#data3 = include_file("hrs12_d.inc")
+#data3 = include_file("hrs12_e.inc")
+#data3 = include_file("hrs12_f.inc")
+
+#data3  = include_file("hrs12_g.inc")
+
+#data3  = include_file("hrs12_h.inc")
+
+#data3  = include_file("hrs12_k.inc")
+
+
+#data3  = include_file("hrs12_l.inc")
+
+#data3  = include_file("hrs12_n.inc")
+
+
+#data3  = include_file("hrs12_p.inc")
+#data3  = include_file("hrs12_q.inc")
+#data3  = include_file("hrs12_r.inc")
+#data3  = include_file("hrs12_u.inc")
 
 #data3  = include_file("hrs12_v1.inc")
 #data3  += include_file("hrs12_v2.inc")
@@ -99,26 +113,31 @@ data3  = include_file("hrs12_u.inc")
 #data3  = include_file("hrs12_v_physmeasintro.inc")
 #data3  += include_file("hrs12_v_physicalmeasures.inc")
 
-#data3 = include_file("hrs10_w.inc")
-#data3 += include_file("hrs10_w1.inc")
-#data3 += include_file("hrs10_w2.inc")
-#data3 += include_file("hrs10_w_events.inc")
+data3 = include_file("hrs12_w.inc")
+#data3 += "BLOCK BM_SSI_APPACCEPTED PARAMETERS " + include_file("hrs12_w1.inc") + " ENDBLOCK"
+#data3 += "BLOCK BM_SSI_APPREJECTED PARAMETERS " + include_file("hrs12_w2.inc") + " ENDBLOCK"
+
+#data3  += include_file("hrs12_j.inc")
+#data3  += include_file("hrs12_j2.inc")
+
+#data3 = include_file("hrs12_w_events.inc")
 
 
 #data3 += include_file("hrs10_v_pensiondocs.inc")
 #data3 += include_file("hrs10_pension.inc")
 
 
-#data3 = include_file("hrs10_a2_init.inc")
-#data3 += include_file("hrs10_a2.inc")
+#data3 += include_file("hrs12_init.inc")
+#data3 += include_file("hrs12_a.inc")
+#data3 += include_file("hrs12_a2.inc")
 
 
+data5 = include_file("hrs12_newpension.inc")
+data5 += include_file("hrs12_pension.inc")
 
-data = data6 + data4 + data + data2 + data3
 
-
-
-#data =  data3
+data = data6 + data4 + data + data2 + data3 + data5
+#data =  data5
 
 def new_scope():
     return {}
@@ -131,7 +150,6 @@ Questions = {}
 Fills = {}
 Auxs = {}
 Fills["UNFTEXT"] = []
-
 def push_scope(scope):
     global levelScope, symbolTable
 
@@ -415,6 +433,7 @@ def t_NEWPAGE(t):
 
 def t_MONTH(t):
     r'[Mm][Oo][Nn][Tt][Hh](?=\(|\s)'
+    symb =  t.lexer.lexdata[t.lexer.lexpos:t.lexer.lexpos+1]
     t.type = "MONTH"
     t.value = "MONTH"
     print "MONTH: " + str(state_in_types) + "****************"
@@ -422,10 +441,19 @@ def t_MONTH(t):
     if state_in_types == 1:
         t.value = "IDENTIFIER"
         t.type = "IDENTIFIER"
+    if state_in_types == 2  or state_in_types == 3:
+        t.value = "IDENTIFIER"
+        t.type = "IDENTIFIER"
+    if symb == "(":
+        t.value = "YEAR"
+        t.type = "YEAR"
+
     return t
 
 def t_YEAR(t):
     r'[Yy][Ee][Aa][Rr](?=\(|\s)'
+    symb =  t.lexer.lexdata[t.lexer.lexpos:t.lexer.lexpos+1]
+
     t.type = "YEAR"
     t.value = "YEAR"
     global state_in_types
@@ -433,7 +461,12 @@ def t_YEAR(t):
     if state_in_types == 1:
         t.value = "IDENTIFIER"
         t.type = "IDENTIFIER"
-
+    if state_in_types == 2 or state_in_types == 3:
+        t.value = "IDENTIFIER"
+        t.type = "IDENTIFIER"
+    if symb == "(":
+        t.value = "YEAR"
+        t.type = "YEAR"
 
     return t
 
@@ -442,16 +475,24 @@ def t_LOCALS(t):
     t.type = "LOCALS"
     t.value = "LOCALS"
     global state_in_types
-    state_in_types = 0
+    state_in_types = 1
     return t
 
+
+def t_FIELDS(t):
+    r'[Ff][Ii][Ee][Ll][Dd][Ss]\s'
+    t.type = "FIELDS"
+    t.value="FIELDS"
+    global state_in_types
+    state_in_types = 3
+    return t
 
 def t_RULES(t):
     r'[Rr][Uu][Ll][Ee][Ss]\s'
     t.type = "RULES"
     t.value="RULES"
     global state_in_types
-    state_in_types = 0
+    state_in_types = 2
     return t
 
 lex_fill_positions = []
@@ -514,6 +555,8 @@ def t_fillcode_error(t):
 
 def t_TAG(t):
     r"\([A-Za-z][0-9]+[\.a-zA-Z0-9]*[_]?\)|\([a-zA-Z]+[_][A-Z]+[_]?[A-Z]*\)|\(GENDER\)|(\(Seq[0-9]P+[\.a-zA-Z0-9]*[_]?[n]?[0-9]?[0-9]?\))"
+
+
     #print t.value
     return t
 
@@ -2222,6 +2265,7 @@ def p_built_in_functions(p):
                                | VAL
                                | TODATE
                                | FRAC
+                               | ORD
 
 
     '''
@@ -2722,13 +2766,9 @@ def p_if_statement(p):
         p[0] = IfElseStatement(p[2],None, p[4],p[5])
 
 
-
-
 def p_elif_statements(p):
         r''' elif_statements :
                                 |  ELSEIF boolean_expression THEN statement_list elif_statements '''
-
-
         if len(p.slice) > 1:
             p[0] = ElseIfStatement(p[2],p[4],p[5])
 
@@ -2788,17 +2828,11 @@ logging.basicConfig(
 log = logging.getLogger()
 
 parser = yacc.yacc()
-
-
 s = data
 result = parser.parse(s, debug=log)
 
-
-
 #pprint.pprint(result,width=120)
 #print result
-
-
 #pprint.pprint( vars )
 
 #
@@ -2810,8 +2844,6 @@ result = parser.parse(s, debug=log)
 #
 #    except Exception as e:
 #        print e
-
-
 
 def getSymbol(symb):
     global symbolTable
@@ -2903,8 +2935,6 @@ def evaluateSubtree(node, debug = True):
                pprint.pprint(node.value)
                evaluateSubtree(node.value)
 
-
-
     if not isinstance(node, list) and node.type == "IF":
         print "IF", node.left, node.right
         nleft = evaluateSubtree(node.left)
@@ -2936,7 +2966,6 @@ def evaluateSubtree(node, debug = True):
         else:
             nright = evaluateSubtree(node.third)
 
-
     if not isinstance(node, list) and node.type == "ELSE":
          evaluateSubtree(node.first)
 
@@ -2944,7 +2973,6 @@ def evaluateSubtree(node, debug = True):
 
         nleft = evaluateSubtree(node.left)
         nright = evaluateSubtree(node.right)
-
 
         left = nleft
         right = nright
@@ -2962,8 +2990,6 @@ def evaluateSubtree(node, debug = True):
                         Fills["UNFTEXT"] = []
 
                      Fills['UNFTEXT'].append(right.value)
-
-
 
                  s = getSymbol(left.name)
 
@@ -2986,14 +3012,10 @@ def evaluateSubtree(node, debug = True):
 
                     vars[left.name] = right
 
-
         elif node.op == "=":
 
             print left, "---COMPARE---", right
-
-
             typeOfSymbol = None
-
 
             if left.type == "IDENTIFIER" and not vars.has_key(left.name):
 
@@ -3007,7 +3029,6 @@ def evaluateSubtree(node, debug = True):
                             for tz in typeDefinition.value.value.value:
                                 vars[tz.name] = { 'name' : tz.name , 'value' : tz.value , 'type' : typeOfSymbol}
 
-
             if left.type == "FIELDDESIGNATOR":
                 variableName = left.value.name
 
@@ -3015,8 +3036,6 @@ def evaluateSubtree(node, debug = True):
 
                 if functionName == "ord":
                     setattr(left,"name", variableName)
-
-
 
             if not hasattr(right,'type'):
 
@@ -3026,9 +3045,6 @@ def evaluateSubtree(node, debug = True):
                         return { "type" : 'INTEGER' , 'value' : 1 }
                     else:
                         return { "type" : 'INTEGER' , 'value' : 0 }
-
-
-
 
             if right.type == "IDENTIFIER" and not vars.has_key(right.name):
 
@@ -3040,13 +3056,10 @@ def evaluateSubtree(node, debug = True):
                     for tz in typeDefinition.value.value.value:
                         vars[tz.name] = { 'name' : tz.name , 'value' : tz.value , 'type' : vars[left.name]['type']}
 
-
-
             if vars[left.name]['value'] == vars[right.name]['value']:
                 return { "type" : 'INTEGER' , 'value' : 1 }
             else:
                 return { "type" : 'INTEGER' , 'value' : 0 }
-
 
         elif node.op == "*":
             print left
@@ -3057,12 +3070,10 @@ def evaluateSubtree(node, debug = True):
             if left['type'] == "REAL" and right['type'] == "REAL":
                 return { 'type' : 'REAL', 'value' : float(left['value']) * float(right['value']) }
 
-
         elif node.op == "+":
             print left, " add ", right
 
             if isinstance(left, dict) and isinstance(right, dict):
-
 
                 if left['type'] == "INTEGER" and right['type'] == "INTEGER":
                     return { "type" : 'INTEGER' , 'value' : int(left['value']) + int(right['value']) }
@@ -3077,8 +3088,8 @@ def evaluateSubtree(node, debug = True):
                         return { "type" : "STRING", 'value' : unicode(left['value'] + " " + "^" + right.name ) }
                     elif (right.type == "FIELDDESIGNATOR" and Fills.has_key(str(right.method).upper())):
                         return { "type" : "STRING", 'value' : unicode(left['value'] + " " + "^" + str(right.method).upper() ) }
-                    elif re.search("[X|Z][0-9]+_?[0-9A-Z_]*", right.name):
-                         res = re.findall("[X|Z][0-9]+_?[0-9A-Z_]*", right.name)
+                    elif re.search("[X|Z][0-9]+(?=_[0-9A-Z_]*)", right.name):
+                         res = re.findall("[X|Z][0-9]+(?=_?[0-9A-Z_]*)", right.name)
                          print res
                          return { "type" : "STRING", 'value' : unicode(left['value']) + " " + Fills[res[0]][0] }
                     else:
@@ -3105,7 +3116,6 @@ def evaluateSubtree(node, debug = True):
                 if left.type == "IDENTIFIER" and right.type == "IDENTIFIER":
                     if re.match("[A-Za-z_0-9]+\[?[A-Z0-9_]*\]?(?:\.[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]+)?(?:\.?[A-Za-z0-9_]+)?",left.name) and Fills.has_key(left.name) and re.match("[A-Za-z_0-9]+\[?[A-Z0-9_]*\]?(?:\.[A-Za-z_0-9]+\[?[A-Za-z0-9_]*\]+)?(?:\.?[A-Za-z0-9_]+)?",right.name) and Fills.has_key(right.name):
                           return { "type" : "STRING", 'value' : unicode("^" + left.name + " " + "^" + right.name) }
-
 
         elif node.op == "-":
             if left['type'] == "INTEGER" and right['type'] == "INTEGER":
@@ -3139,8 +3149,6 @@ def evaluateSubtree(node, debug = True):
         elif node.op == "<>":
 
             print left, "---DIFF---", right
-
-
             typeOfSymbol = None
 
             if left.type == "IDENTIFIER" and not vars.has_key(left.name):
@@ -3155,7 +3163,6 @@ def evaluateSubtree(node, debug = True):
                             for tz in typeDefinition.value.value.value:
                                 vars[tz.name] = { 'name' : tz.name , 'value' : tz.value , 'type' : typeOfSymbol}
 
-
             if right.type == "IDENTIFIER" and not vars.has_key(right.name):
 
                 # we need to figure out this comparison then
@@ -3166,13 +3173,10 @@ def evaluateSubtree(node, debug = True):
                     for tz in typeDefinition.value.value.value:
                         vars[tz.name] = { 'name' : tz.name , 'value' : tz.value , 'type' : vars[left.name]['type']}
 
-
-
             if vars[left.name]['value'] == vars[right.name]['value']:
                 return { "type" : 'INTEGER' , 'value' : 1 }
             else:
                 return { "type" : 'INTEGER' , 'value' : 0 }
-
 
         elif node.op == "AND":
             if left['value'] and right['value']:
@@ -3210,20 +3214,60 @@ def evaluateSubtree(node, debug = True):
 #    if ()
 #    vars[kk] = { 'type' : "STRING" , "value" : z[0] }
 
+FLHeader = []
+FLHeader.append('401K Plan')
+FLHeader.append('Supplemental Retirement Account (SRA)')
+FLHeader.append('Defined Benefit Plan')
+FLHeader.append('Defined Contribution Plan')
+FLHeader.append('401A Plan')
+FLHeader.append('403B Plan')
+FLHeader.append('457 Plan')
+FLHeader.append('Thrift/Savings Plan (TSP)')
+FLHeader.append('Profit-sharing Plan')
+FLHeader.append('Employee Stock Ownership Plan (ESOP)')
+FLHeader.append('Money Purchase Plan')
+FLHeader.append('Portable Cash Option Plan')
+FLHeader.append('Employee Stock Purchase Plan (ESPP)')
+FLHeader.append('SEP or SIMPLE Plan')
+FLHeader.append('Combination Plan')
+FLHeader.append('Cash Balance Plan')
+FLHeader.append('pension plan')
+
+Fills["PIM510STRING"] = [u"MONTH"]
+Fills["FLACCOUNTTYPE"] = FLHeader
+Fills["PIINITA508_PWEMPNAME"] = [u"EMPLOYER NAME"]
+if Fills.has_key("FLW233"):
+    Fills["FLW233A"] = Fills["FLW233"]
+
+
+Fills["FLQ433_GENDER"] = [u"he/she"]
+
+if Fills.has_key("FLL060"):
+    Fills["FLJ643"] = Fills["FLL060"]
+
 if Fills.has_key("Seq8P"):
     Fills["P173_"] = Fills["Seq8P"][1]
     Fills["P028_"] =  Fills["Seq8P_22"][1]
 
-
+Fills["PIX058AFNAME"] = [u"[FIRST NAME]"]
+Fills["PIRESPONDENTS1X058AFNAME"] = [u"R's FIRST NAME"]
+Fills["PICHILDRENCNT3X058AFNAME"] = [u"[CHILD NAME]"]
+Fills["PIX061ARELATER"] = [u"RELATIONSHIP TO R-UPDATED"]
 Fills["FLPREVWAVE"] = [u"[PREVIOUS WAVE]"]
 Fills["FLCURWAVE"] = [u"[CURRENT WAVE]"]
-
+Fills["FLN280_CODE1"] = [u"[PRIVATE PLAN 1]"]
+Fills["FLN280_CODE2"] = [u"[PRIVATE PLAN 2]"]
+Fills["FLN280_CODE3"] = [u"[PRIVATE PLAN 3]"]
 if Fills.has_key("FLW043_1"):
     Fills["PIW049"]  = Fills["FLW043_1"]
     Fills["FLTHISTHESE"] = Fills["PETHISTHESE"]
     Fills["FLACCOUNTS"]  = Fills["PEACCOUNTS"]
     Fills["FLW002"] = Fills["FLW002A"]
 
+vars["X025_MAINCTY"] =  { 'type' : "STRING", 'value' : u"MAIN RES ADDRESS CITY"}
+vars["AX061ARELATER"] =  { 'type' : "STRING", 'value' : u"RELATIONSHIP TO R-UPDATED"}
+Fills["MOX"] = [u"MONTH"]
+Fills["STRX036"] = [u"MONTH"]
 Fills["MOSTRECENTJOB.L008_"] = ["[COMPANY NAME]"]
 Fills["MOSTRECENTJOB.L027_"] = ["[INCLUDED IN PENSION PLAN"]
 Fills["MOSTRECENTJOB.L009_"] = ["[START WRK-YR]"]
@@ -3257,12 +3301,17 @@ Fills["PIPERSONNAME"] = [u"HOUSEHOLD MEMBER NAME"]
 Fills["PIN070_DENCOVNAME"] = ["[NAME DENTAL COVERAGE PLAN]"]
 Fills["PIINITA061TLCY_A"] = ["[LAST CALENDAR YEAR]"]
 Fills["PISTRINITA061TLCY_A"] = ["[LAST CALENDAR YEAR]"]
-Fills["X038MO"] =  ["[PREV WAVE IW MONTH OF FINANCIAL R]"]
+Fills["X038MO"] =   ["[PREV WAVE IW MONTH OF FINANCIAL R]"]
+Fills["FLDOLLARSTR"] = [u"[DOLLAR AMOUNT]"]
+vars["FLHHX038MO"] =  { 'type' : "STRING" , "value" : "[PREV WAVE IW MONTH OF FINANCIAL R]" }
+vars["X038_FINRIWMO_V"] =   { 'type' : "STRING" , "value" : "[PREV WAVE IW MONTH OF FINANCIAL R]" }
 Fills["Z092"] = [ "PREV WAVE IW MONTH" ]
 Fills["PIINITA062T2YRSAGO_A"] = [ "2 YEARS AGO"]
 vars["FLHHX038_FINRIWMO_V"] =   { 'type' : "STRING" , "value" :    "[PREV WAVE IW MONTH OF FINANCIAL R]" }
 vars["FLPWIWDATE"] = { 'type' : "STRING" , "value" : "[PREV WAVE FIRST R IW MONTH],[PREV WAVE FIRST R IW YEAR]" }
-vars["FLPWIWMO"] = {'type' : "STRING" , "value" : "[PREV WAVE FIRST R IW MONTH" }
+vars["FLPWIWMO"] = {'type' : "STRING" , "value" : "[PREV WAVE FIRST R IW MONTH]" }
+vars["PWIWMO"] = {'type' : "STRING" , "value" : "[PREV WAVE FIRST R IW MONTH]" }
+
 vars["PWFAMIWMO"] = vars["FLPWIWMO"]
 vars["PIPRELOAD_R1X058AFNAME".upper()] = { 'type' : "STRING", 'value' : "R's FIRST NAME" }
 vars["piPreloadR1X058AFName".upper()] =  { 'type' : "STRING", 'value' : "R's FIRST NAME" }
@@ -3282,7 +3331,22 @@ vars["STRZ092".upper()] = { 'type' : "STRING", 'value' : "[" + "PREV WAVE IW [MO
 vars["FILLHAS".upper()] = { 'type' : "STRING", 'value' : "DISPUTES PREVIOUS WAVE RECORD, BUT NOW HAS CONDITION"}
 vars["FILLNOTHAVE".upper()] = { 'type' : "STRING", 'value' : "DISPUTES PREVIOUS WAVE RECORD, DOES NOT HAVE CONDITION"}
 vars["FILLNO".upper()] = { 'type' : "STRING", 'value' : "NO"}
-vars["PIBA_RESPONDENTS1X058AFNAME"] = { 'type' : "STRING" , 'value' : "[R's FIRST NAME]"}
+vars["PIBJ_J046EMPLOYERINFOW158_CURREMPNAME"] ={ 'type' : "STRING", 'value' :  u"CURRENT EMPLOYER" }
+vars["PIBJ_J158EMPLOYERINFOW158_CURREMPNAME"] ={ 'type' : "STRING", 'value' :  u" EMPLOYER" }
+vars["PIINITA508_PWEMPNAME"] = {'type' : "STRING", 'value' :   u"PREV WAVE EMPLOYER NAME"}
+Fills["PIINITA508_PWEMPNAME"] = [ u"PREV WAVE EMPLOYER NAME"]
+vars["PIBA_RESPONDENTS1X058AFNAME"] = { 'type' : "STRING" , 'value' : u"[R's FIRST NAME]"}
+vars["PIBA_RESPONDENTS2X058AFNAME"] = { 'type' : "STRING" , 'value' : u"[R's SPOUSE/PARTNER's FIRST NAME]" }
+Fills["PIBA_RESPONDENTS1X058AFNAME"] = [u"[R's FIRST NAME]"]
+Fills["PIBA_RESPONDENTS2X058AFNAME"] = [u"[R's SPOUSE/PARTNER's FIRST NAME]"]
+Fills["BA_RESPONDENTS[2].X058AFNAME"] = [u"[R's SPOUSE/PARTNER's FIRST NAME]"]
+Fills["BA_RESPONDENTS[1].X058AFNAME"] = [u"[R's FIRST NAME]"]
+Fills["PIRTAB1X017ARLNAME"] = [u"[R's LAST NAME]"]
+Fills["R_ROSTER.RGRID[1].X017ARLNAME"] = [u"[R's LAST NAME]"]
+Fills["R_ROSTER.RGRID[2].X058AFNAME"] = [u"[R's SPOUSE/PARTNER's FIRST NAME]"]
+Fills["PIRESPONDENTS2X058AFNAME"] = [u"[R's SPOUSE/PARTNER's FIRST NAME]"]
+Fills["BA_RESPONDENTS[1].X060ASEX"] = [u"[R's SEX]"]
+Fills["R_ROSTER.RGRID[3].X058AFNAME"]  = [u"[FIRST NAME]"]
 vars["PIRESPONDENTS1X058AFNAME"] = { 'type' : "STRING" , 'value' : "[R's FIRST NAME]"}
 vars['Z091'] = { 'type' : "STRING", 'value' : "PREV WAVE EMPLOYER NAME"}
 vars['Z092'] = { 'type' : "STRING", 'value' : "PREV WAVE IW MONTH" }
@@ -3294,7 +3358,7 @@ vars['M014_'] = { 'type' : "STRING", 'value' : '[IMPAIRMNT BEGIN  INTERFER WORK-
 vars['M016_'] = { 'type' : "STRING", 'value' : '[HEALTH PROB PREVENT WRK-YR]'}
 vars['AARRAYSTRING'] = { 'type' : "STRING", 'value' : '[PERSON LIST]'}
 vars['PIPRELOAD_HHX025_MAINCTY'] = { 'type' : "STRING", 'value' : '[MAIN RES ADDRESS CITY]'}
-
+Fills["STARTINTERVIEW.A155_SELFPRXY"] = [u"[DESIGNATE TYPE OF INTERVIEW]"]
 Fills["PLANIDENTIFIERS[1]"] = [u"[First Pension]"  ]
 Fills["PLANIDENTIFIERS[2]"] = [u"[Second Pension]" ]
 Fills["PLANIDENTIFIERS[3]"] = [u"[Third Pension]" ]
@@ -3308,6 +3372,9 @@ Fills["X025_MainCty"] = ['[MAIN RES ADDRESS CITY]']
 
 for i in range(1,30,1):
     vars['FL_MONTH[' + str(i) + "]"] = { 'type' : "STRING", 'value' : '[MONTH][' + str(i) + "]"}
+
+Fills["FLKITCHENSINK"] = [u"a ^FLACCOUNTTYPE with [EMPLOYER NAME] where you worked ^FLDATES ", u"a ^FLACCOUNTTYPE with  [EMPLOYER NAME] where you worked ^FLDATES which you called your [PLAN NAME]",    u"a ^FLACCOUNTTYPE with a job where you worked ^FLDATES", u"a ^FLACCOUNTTYPE with a job where you worked ^FLDATES which you called your [PLAN NAME]" ]
+vars['PIJ2PLANNAME'] = {  'name' :"PIJ2PLANNAME", 'type' : "STRING", 'value' : u"[PLAN NAME]" }
 
 vars['VAL6ST'] = {  'name' :"VAL6ST", 'type' : "STRING", 'value' : u"VAL6ST" }
 vars['VAL5ST'] = {  'name' :"VAL5ST", 'type' : "STRING", 'value' : u"VAL5ST" }
@@ -3507,10 +3574,10 @@ Fills['FLsinceinthe_1FAM'.upper()] = ["Since PREV INTERVIEW MONTH, YEAR OF FAM I
 Fills['FLinlastIWMoYr'.upper()] =["In the last INTERVIEW MONTH, YEAR"]
 Fills['FLinlastIWMoYrParen'.upper()] = [ "(In the last INTERVIEW MONTH, YEAR)" ]
 Fills['FLAreSPP'.upper()] = ["Are you/Is he/she"]
-Fills['FLSelf'.upper()] = ["Self"]
-Fills['FLSPProxy'.upper()] = ["PROXY, SPOUSE IS REPORTER"]
-Fills['FLNONSPProxy'.upper()] = [ "PROXY, NON-SPOUSE IS REPORTER" ]
-Fills['flempname'.upper()] = ["CURRENT EMPLOYER"]
+Fills['FLSelf'.upper()] = u"Self"
+Fills['FLSPProxy'.upper()] = u"PROXY, SPOUSE IS REPORTER"
+Fills['FLNONSPProxy'.upper()] = u"PROXY, NON-SPOUSE IS REPORTER"
+Fills['flempname'.upper()] = u"CURRENT EMPLOYER"
 Fills['FLMONTH'] = [""]
 Fills['FL_MONTH'] = [""]
 Fills["STRSTATE"]  = ["[STATE]"]
@@ -3601,8 +3668,16 @@ vars['PISECLJOBHISTORYMOSTRECENTJOBL008_'] =  { 'type' : "STRING", 'value' : "["
 vars['PISECKPENSIONLOOPBK_EMPLOYERINFOW158_CURREMPNAME'] = { 'type' : "STRING", 'value' : "[" + "LAST EMPLOYER" +  "]"}
 Fills["STARTYEAR"] = ["START YEAR"]
 Fills["FIRSTYEAR"] = ["FIRST YEAR"]
-Fills["PIFILL1"] = ["were you born'"]
-Fills["PIFILL4"] = ["SPOUSE/PARTNER'S"]
+Fills["PIFILL1"] = [u"were you born'"]
+
+if Fills.has_key('txtbirthdate1'.upper()):
+    Fills["PIFILL2"] = Fills["txtbirthdate1".upper()]
+
+if Fills.has_key('txtbirthdate2'.upper()):
+    Fills["PIFILL3"] = Fills["txtbirthdate2".upper()]
+
+
+Fills["PIFILL4"] = u"SPOUSE/PARTNER'S"
 Fills["TXTPROXY"] = ['or doing a proxy for (him/her).']
 vars["B089TEMP1"] =  { 'type' : "STRING", 'value' : 'White Caucasian'}
 vars["B089TEMP2"] =  { 'type' : "STRING", 'value' : 'African American'}
@@ -3623,8 +3698,8 @@ vars["FLNRKID"] = { "type" : "STRING" , "value" : "[NON RES KID]"}
 
 if Fills.has_key("FLE012_2"):
 
-    Fills["FLE012_2"][0] = [" (in CITY NURSINGHOME)"]
-    Fills["FLE012_2"][1] = [" (in CITY NURSINGHOME)"]
+    Fills["FLE012_2"][0] =  u" (in CITY NURSINGHOME)"
+    Fills["FLE012_2"][1] =  u" (in CITY NURSINGHOME)"
 
 
 for i in range(0, 100):
@@ -3650,7 +3725,7 @@ def replaceFills(strn):
                 for x in Fills[rpl]:
                     if not isinstance(x, unicode):
                         n = evaluateSubtree(x)
-
+                        print n
                         fixFills.append(n['value'])
                     else:
                         fixFills.append(x)
@@ -3662,23 +3737,20 @@ def replaceFills(strn):
 
         return strn
 
-def resolveType(kv, tdf, types = None):
+def resolveType(kv, tdf, typess = None):
 
-    if types != None:
+    if typess != None:
         print kv
 
-        if isinstance(types, dict):
+        if isinstance(typess, dict):
             return { 'type' : 1, 'value' : ""}
 
-        print types
-        print types.value
-        setattr(tdf, "typeOf", types.value)
+        print typess
+        print typess.value
+        setattr(tdf, "typeOf", typess.value)
 
-    if tdf.typeOf.value == "OPEN": # type 1
-        print kv, " ", pprint.pprint(tdf.typeOf.value)
-        return { 'type' : 1,  'value' : "" }
 
-    elif hasattr(tdf.typeOf.value, "set_t") and  tdf.typeOf.value.type == "SET":     # type 4
+    if hasattr(tdf.typeOf.value, "set_t") and  tdf.typeOf.value.type == "SET":     # type 4
         print kv
         items = []
 
@@ -3723,8 +3795,12 @@ def resolveType(kv, tdf, types = None):
         return { 'type' : 1,  'value' : ''}
     elif hasattr(tdf.typeOf.value, "type") and tdf.typeOf.value.type == "ARRAY":
         return { 'type' : 1 , 'value' : ''}
+    elif hasattr(tdf.typeOf.value, "type") and tdf.typeOf.value == "OPEN": # type 1
+        print kv, " ", pprint.pprint(tdf.typeOf.value)
+        return { 'type' : 1,  'value' : "" }
+
     else:
-        if types == None:
+        if typess == None:
             sz = getSymbol(tdf.typeOf.value)
             if sz == None:
                 return { 'type' : 0, 'value' : ''}
@@ -3762,111 +3838,155 @@ for k,v in Questions.iteritems():
         else:
             Questions[k].description = string.replace(Questions[k].description, z, z.upper())
 
-    #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'C. Physical Health'  ] )
-    #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'M1. Disability For Reinterviews'  ] )
+
+
+
+  #  if k[1] == "M" or k[1] == "W":
+#
+ #       if not desc:
+  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'M2. Disability For Non-reinterviews'  ] )
+   #     else:
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'M2. Disability For Non-reinterviews'  ] )
+
+#    if k[1] == "M" or k[1] == "W":
+#
+#        if not desc:
+#            listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'M1. Disability For Reinterviews'  ] )
+#        else:
+#            listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'M1. Disability For Reinterviews'  ] )
+
     #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'M2. Disability For Non-reinterviews'  ] )
-    #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'S. Widowhood And Divorce'  ] )
-    #listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'T. Wills And Life Insurance'  ] )
 
-    #if k[0] == "T" and k[1] == "N":
-    #    listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'TN. Thumbnails'  ] )
 
-    #if k[0] == "W" and k[1] == "3":
-    #    listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'W. Events, Internet Use & Social Security Permission'  ] )
+    #if k[1] == "S" :
 
- #   if k[0] == "A":
-  #      if not desc:
+ #       if not desc:
+#
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'S. Widowhood And Divorce'  ] )
+   #     else:
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'S. Widowhood And Divorce'  ] )
+
+
+    #if k[1] == "T" :
+#
+ #       if not desc:
+#
+ #           listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'T. Wills And Life Insurance'  ] )
+  #      else:
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'T. Wills And Life Insurance'  ] )
+
+
+
+
+#    if k[1] == "T" and k[2] == "N":
+#
+#        if not desc:
+#            listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'TN. Thumbnails'  ] )
+#        else:
+#            listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'TN. Thumbnails'  ] )
+
+    #if k[1] == "W" and k[2] == "3":
+    #    if not desc:
+    #        listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'W. Events, Internet Use & Social Security Permission'  ] )
+    #    else:
+    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'W. Events, Internet Use & Social Security Permission'  ] )
+
+
+   # if k[1] == "A":
+   #     if not desc:
    #         listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'],  'A. Coverscreen' ] )
-    #    else:
-     #       listofQuestions.append([k, Questions[k].description, Questions[k].description , typeAns['type'], typeAns['value'],  'A. Coverscreen' ] )
-
-    #if k[0] == "B" or k[0] == "H":
-    #
-    #    if not desc:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'B. Demographics'  ] )
-    #    else:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'B. Demographics'  ] )
-
-    #if k[0] == "D":
-    #
-    #    if not desc:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'D. Cognition'  ] )
-    #    else:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'D. Cognition'  ] )
-
-   # if k[0] == "E":
-#
- #       if not desc:
-  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'E. Family Structure'  ] )
    #     else:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'E. Family Structure'  ] )
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].description , typeAns['type'], typeAns['value'],  'A. Coverscreen' ] )
 
-    #if k[0] == "F":
+   # if k[1] == "B":
+   #     if not desc:
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'B. Demographics'  ] )
+   #     else:
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'B. Demographics'  ] )
 
-#        if not desc:
-#            listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'F. Parents & Sibling Couple Decisions'  ] )
+
+   # if k[1] == "C":
+   #     if not desc:
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'C. Physical Health'  ] )
+   #     else:
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'C. Physical Health'  ] )
+
+    #if k[1] == "D":
+    #   if not desc:
+    #       listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'D. Cognition'  ] )
+    #   else:
+    #       listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'D. Cognition'  ] )
+
+    #if k[1] == "E":
+
+    #   if not desc:
+    #     listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'E. Family Structure'  ] )
+    #   else:
+    #     listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'E. Family Structure'  ] )
+
+    #if k[1] == "F":
+    #    if not desc:
+    #       listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'F. Parents & Sibling Couple Decisions'  ] )
+    #    else:
+    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'F. Parents & Sibling Couple Decisions'  ] )
+
+    #if k[1] == "G":
+     #   if not desc:
+     #       listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'G. Functional Limitations, ADL IADL, Helpers'  ] )
      #   else:
-     #       listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'F. Parents & Sibling Couple Decisions'  ] )
+     #       listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'G. Functional Limitations, ADL IADL, Helpers'  ] )
+   # if k[1] == "H":
 
-    #if k[0] == "G":
-
- #       if not desc:
- #           listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'G. Functional Limitations, ADL IADL, Helpers'  ] )
- #       else:
- #           listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'G. Functional Limitations, ADL IADL, Helpers'  ] )
-    #if k[0] == "H":
-
-        #if not desc:
-        #    listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'H. Housing'  ] )
-        #else:
-        #    listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'H. Housing'  ] )
+    #    if not desc:
+     #       listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'H. Housing'  ] )
+      #  else:
+       #     listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'H. Housing'  ] )
 
 
-#    if k[0] == "J":
-
-#        if not desc:
-#            listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'J. Employment'  ] )
-#        else:
-#            listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'J. Employment'  ] )
-
-#    if k[0] == "K":
-#
-#        if not desc:
-#            listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'K. Last Job'  ] )
-#        else:
-#            listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'K. Last Job'  ] )
-
-  #  if k[0] == "L":
-#
- #       if not desc:
-  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'L. Job History'  ] )
+   # if k[1] == "J":
+   #     if not desc:
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'J. Employment'  ] )
    #     else:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'L. Job History'  ] )
+   #         listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'J. Employment'  ] )
+
+#    if k[1] == "K":
+
+ #        if not desc:
+  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'K. Last Job'  ] )
+   #      else:
+    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'K. Last Job'  ] )
+
+    #if k[1] == "L":
+
+     #   if not desc:
+     #       listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'L. Job History'  ] )
+     #   else:
+     #       listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'L. Job History'  ] )
 
 
-#    if k[0] == "N":
+#    if k[1] == "N":
 #
  #       if not desc:
   #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'N. Health Services And Insurance'  ] )
    #     else:
-   #         listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'N. Health Services And Insurance'  ] )
+    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'N. Health Services And Insurance'  ] )
 
-  #  if k[0] == "P" or (k[0] == "S" and k[1] == "e"):
-#
- #       if not desc:
-  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'P. Expectations'  ] )
-   #     else:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'P. Expectations'  ] )
+   # if k[1] == "P" or (k[1] == "S" and k[2] == "e"):
+
+    #    if not desc:
+     #       listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'P. Expectations'  ] )
+     #   else:
+      #      listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'P. Expectations'  ] )
 
 
-    #if k[0] == "Q":
-#
- #       if not desc:
-  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'Q. Assets and Income'  ] )
-   #     else:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'Q. Assets and Income'  ] )
+    #if k[1] == "Q":
 
-    #if k[0] == "R":
+     #   if not desc:
+     #       listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'Q. Assets and Income'  ] )
+     #   else:
+     #       listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'Q. Assets and Income'  ] )
+
+    #if k[1] == "R":
 #
  #       if not desc:
   #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'R. Asset change'  ] )
@@ -3874,21 +3994,21 @@ for k,v in Questions.iteritems():
     #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'R. Asset change'  ] )
 
 
-    if k[1] == "U":
+    #if k[1] == "U":
+#
+ #       if not desc:
+  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'U. Asset Reconciliation'  ] )
+   #     else:
+    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'U. Asset Reconciliation'  ] )
 
-        if not desc:
-            listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'U. Asset Reconciliation'  ] )
-        else:
-            listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'U. Asset Reconciliation'  ] )
 
 
-
-    if k[1] == "V":
-
-        if not desc:
-            listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'V. Modules'  ] )
-        else:
-            listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'V. Modules'  ] )
+    #if k[1] == "V":
+#
+ #       if not desc:
+  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'V. Modules'  ] )
+   #     else:
+    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'V. Modules'  ] )
 
 
 
@@ -3907,18 +4027,43 @@ for k,v in Questions.iteritems():
      #       listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'I. Physical Measures'  ] )
 
 
-  #  if k[0] == "V" or k[0] == "W":
-#
- #       if not desc:
-  #          listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'PE. PENSION'  ] )
-   #     else:
-    #        listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'PE. PENSION'  ] )
+
+    if k[1] == "V" or (k[1] == "W" and (k[2] == "0" or (k[2] == "1" and int(k[3]) < 5)))  or k[1] == "J":
+
+        if not desc:
+           listofQuestions.append([k, Questions[k].description, Questions[k].languages[0], typeAns['type'], typeAns['value'], 'PE. Pension'  ] )
+        else:
+            listofQuestions.append([k, Questions[k].description, Questions[k].description, typeAns['type'], typeAns['value'], 'PE. Pension'  ] )
 
 
 # HRS
 # study 1
 # survey 2010 72
 # module section c 1369
+
+
+FLHeader = []
+FLHeader.append('Job ^FLDATES - 401K Plan')
+FLHeader.append('Job ^FLDATES - Supplemental Retirement Account (SRA)')
+FLHeader.append('Job ^FLDATES - Defined Benefit Plan')
+FLHeader.append('Job ^FLDATES - 401A Plan')
+FLHeader.append('Job ^FLDATES - 403B Plan')
+FLHeader.append('Job ^FLDATES - 457 Plan')
+FLHeader.append('Job ^FLDATES - Thrift/Savings Plan (TSP)')
+FLHeader.append('Job ^FLDATES - Profit-sharing Plan')
+FLHeader.append('Job ^FLDATES - Employee Stock Ownership Plan (ESOP)')
+FLHeader.append('Job ^FLDATES - Money Purchase Plan')
+FLHeader.append('Job ^FLDATES - Portable Cash Option Plan')
+FLHeader.append('Job ^FLDATES - Employee Stock Purchase Plan (ESPP)')
+FLHeader.append('Job ^FLDATES - SEP or SIMPLE Plan')
+FLHeader.append('Job ^FLDATES - Combination Plan')
+FLHeader.append('Job ^FLDATES - Cash Balance Plan')
+FLHeader.append('Job ^FLDATES - Unknown/Other Plan Type')
+
+Fills["FLHEADER"] = FLHeader
+Fills["FLPARENA"] = [u"(", u""]
+Fills["FLPARENB"] = [u")", u""]
+Fills["PIEMPLOYERNAME"] = [u"[EMPLOYER NAME]"]
 
 if Fills.has_key('W205'):
     Fills['W205A'] = Fills['W205']
@@ -3933,36 +4078,48 @@ if Fills.has_key("peFLthatEmp".upper()):
 vars["STRRELATION"] = { 'type' : "STRING", 'value' : "[RELATIONSHIP TO R]" }
 
 from g2import import insertBlaise
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'C. Physical Health' : 1369 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'M1. Disability For Reinterviews' : 1371 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'M2. Disability For Non-reinterviews' : 1372 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'S. Widowhood And Divorce' : 1373 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'T. Wills And Life Insurance' : 1374 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'TN. Thumbnails' : 1375 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'W. Events, Internet Use & Social Security Permission'  : 1376 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'A. Coverscreen'  : 1370 })
-## MODULE C ###
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'B. Demographics' : 1377 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'D. Cognition' : 1378 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'E. Family Structure' : 1379 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'F. Parents & Sibling Couple Decisions' : 1380 })
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'G. Functional Limitations, ADL IADL, Helpers' : 1401 }) # really 1401 was 1381
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'H. Housing' : 1402 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'J. Employment' : 1403 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'K. Last Job' : 1431 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'L. Job History' : 1433 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'N. Health Services And Insurance' : 1435 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'P. Expectations' : 1436 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'Q. Assets and Income' : 1437 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'R. Asset change' : 1438 }) # really was 1382 / 1402
-frame, validated = insertBlaise.LoadItems(listofQuestions,{  'U. Asset Reconciliation' : 1446 }) # really was 1382 / 1402
 
+
+
+## MODULE C ###
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'A. Coverscreen'  : 1468 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'W. Events, Internet Use & Social Security Permission'  : 1467 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'TN. Thumbnails' : 1466 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'T. Wills And Life Insurance' : 1465 })
+
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'S. Widowhood And Divorce' : 1464 })
+
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'M2. Disability For Non-reinterviews' : 1463 })
+
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'M1. Disability For Reinterviews' : 1462 })
+
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'B. Demographics' : 1461 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{ 'C. Physical Health' : 1460 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'D. Cognition' : 1459 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'E. Family Structure' : 1458 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'F. Parents & Sibling Couple Decisions' : 1457 })
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'G. Functional Limitations, ADL IADL, Helpers' : 1456 }) # really 1401 was 1381
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'H. Housing' : 1455 }) # really was 1382 / 1402
+
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'J. Employment' : 1453 }) # really was 1382 / 1402
+
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'K. Last Job' : 1452 }) # really was 1382 / 1402
+
+
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'L. Job History' : 1451 }) # really was 1382 / 1402
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'N. Health Services And Insurance' : 1450 }) # really was 1382 / 1402
+
+
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'P. Expectations' : 1449 }) # really was 1382 / 1402
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'Q. Assets and Income' : 1448 }) # really was 1382 / 1402
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'R. Asset change' : 1447 }) # really was 1382 / 1402
+#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'U. Asset Reconciliation' : 1446 }) # really was 1382 / 1402
 
 
 #frame, validated = insertBlaise.LoadItems(listofQuestions,{  'V. Modules' : 1445 }) # really was 1382 / 1402
 #frame, validated = insertBlaise.LoadItems(listofQuestions,{  'Y. Time Calculations' :  }) # really was 1382 / 1402
 #frame, validated = insertBlaise.LoadItems(listofQuestions,{  'I. Physical Measures' : 1444 }) # really was 1382 / 1402
-#frame, validated = insertBlaise.LoadItems(listofQuestions,{  'PE. PENSION' :  }) # really was 1382 / 1402
+frame, validated = insertBlaise.LoadItems(listofQuestions,{  'PE. Pension' : 1469 }) # really was 1382 / 1402
 FirstPassFills = {}
 
 
@@ -4134,30 +4291,35 @@ def replaceFinalFills(k, strn):
                 for z in t:
                     print z[1:]
 
-                    if not FirstPassFills.has_key(z[1:]):
-                        FirstPassFills[z[1:]] = []
-
-                    if isinstance(FirstPassFills[z[1:]],list):
-                        print finald[counter]
+                    if  FirstPassFills.has_key(z[1:]):
 
 
                         if isinstance(FirstPassFills[z[1:]],list):
+                            print finald[counter]
 
-                            strn[counter] = strn[counter].replace(z, "/".join(FirstPassFills[z[1:]]))
-                            #print strn[counter]
+
+                            if isinstance(FirstPassFills[z[1:]],list):
+
+                                strn[counter] = strn[counter].replace(z, "/".join(FirstPassFills[z[1:]]))
+                                #print strn[counter]
+                            else:
+                                strn[counter] = strn[counter].replace(z, FirstPassFills[z[1:]])
+                                #print strn[counter]
+
+
+
+                            #finald = d.replace(z,"/".join(FirstPassFills[trim(z[1:])]))
                         else:
-                            strn[counter] = strn[counter].replace(z, FirstPassFills[z[1:]])
-                            #print strn[counter]
-
-
-
-                        #finald = d.replace(z,"/".join(FirstPassFills[trim(z[1:])]))
+                            print "ee ", counter, z, d, " ee"
+                            print "1xx ", string.replace(d, z, FirstPassFills[z[1:]]), " xx1"
+                            print "1aa ", counter, z, d, FirstPassFills[z[1:]], " aa1"
+                            print counter, z, d
+                            #finald = d.replace(z, FirstPassFills[trim(z)[1:]])
                     else:
                         print "ee ", counter, z, d, " ee"
-                        print "1xx ", string.replace(d, z, FirstPassFills[z[1:]]), " xx1"
-                        print "1aa ", counter, z, d, FirstPassFills[z[1:]], " aa1"
+                        print "1xx ", unicode.replace(d, z, Fills[z[1:]][0]), " xx1"
+                        print "1aa ", counter, z, d, Fills[z[1:]][0], " aa1"
                         print counter, z, d
-                        #finald = d.replace(z, FirstPassFills[trim(z)[1:]])
 
 
                 counter = counter + 1
